@@ -1,8 +1,8 @@
-# 04 — Skill System (Terinspirasi OpenClaw)
+# 04 — Skill System
 
 ## Konsep
 
-Di OpenClaw, kemampuan agent = "skill" file markdown. ChibiClaw mengadopsi pola sama: setiap kemampuan didefinisikan sebagai file JSON di `assets/skills/`. Gemma membaca skill definition sebagai bagian prompt, lalu function calling untuk eksekusi.
+Setiap kemampuan agent didefinisikan sebagai file JSON di `assets/skills/`. Gemma membaca skill definition sebagai bagian prompt, lalu function calling untuk eksekusi.
 
 Diagram: `diagrams/skill-system.txt`
 
@@ -81,11 +81,3 @@ Tidak semua skill di-load ke prompt (boros token):
 2. Hanya skill relevan di-load ke context E4B
 3. Jika tidak ada match → Gemma plan dari function primitives
 
-## vs OpenClaw Skills
-
-| Aspek | OpenClaw | ChibiClaw |
-|-------|----------|-----------|
-| Format | Markdown | JSON |
-| Runtime | Node.js | Kotlin + Gemma |
-| Distribution | ClawHub registry | Lokal + share via file |
-| Execution | Shell, browser, API | Intent, ContentProvider, Accessibility, Shell |

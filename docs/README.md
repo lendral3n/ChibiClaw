@@ -1,7 +1,6 @@
 # ChibiClaw v3 — Project Documentation
 
 > Android Backend Agent untuk Asisten Virtual, powered by Gemma 4 On-Device via LiteRT-LM.
-> Terinspirasi dari OpenClaw (agent untuk desktop/server), ChibiClaw adalah versi Android-nya.
 
 ---
 
@@ -13,7 +12,7 @@ ChibiClaw adalah backend agent yang berjalan di perangkat Android sebagai Foregr
 - **Offline-first** — Seluruh reasoning on-device via Gemma 4 + LiteRT-LM, Rp 0 biaya
 - **Intent-first execution** — Selalu gunakan Intent API sebelum eskalasi ke Accessibility/Shell
 - **Skill-based** — Kemampuan agent berupa file JSON konfigurasi, bukan hardcoded
-- **Safety by design** — Approval gate terinspirasi OpenClaw
+- **Safety by design** — Approval gate dengan severity-based policies
 
 ## Tech Decision: LiteRT-LM (BUKAN Edge Gallery App)
 
@@ -33,7 +32,7 @@ Lihat: `11-ai-integration-guide.md` untuk detail lengkap.
 | 01 | `01-architecture.md` | Arsitektur pipeline modular |
 | 02 | `02-gemma-integration.md` | Strategi Gemma on-device, prompt, function calling schema |
 | 03 | `03-execution-strategy.md` | Intent-first 4-tier hierarchy |
-| 04 | `04-skill-system.md` | Skill system terinspirasi OpenClaw |
+| 04 | `04-skill-system.md` | Skill system berbasis JSON |
 | 05 | `05-tech-stack.md` | Daftar teknologi |
 | 06 | `06-folder-structure.md` | Struktur folder project |
 | 07 | `07-state-machine.md` | 7-state FSM |
@@ -95,4 +94,3 @@ sebagai context agar Claude tidak bingung dan menghasilkan kode yang konsisten:
 | Function Calling Guide | github.com/google-ai-edge/gallery/blob/main/Function_Calling_Guide.md | @Tool pattern |
 | Gemma 4 model card | ai.google.dev/gemma/docs/core/model_card_4 | Model capabilities |
 | LiteRT-LM models | huggingface.co/litert-community | Download .litertlm |
-| OpenClaw (inspirasi) | openclaw.ai | Skill, approval, gateway patterns |
