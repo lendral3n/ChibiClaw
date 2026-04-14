@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Round-icon variant. Same adaptive-icon layers as ic_launcher.xml —
+    the round mask is applied by the launcher itself to the foreground
+    PNG. Keeping this file means legacy third-party launchers that ask
+    specifically for `ic_launcher_round` still resolve cleanly instead
+    of falling back to the system default.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

@@ -1,0 +1,17 @@
+{
+  "name": "utility_calc",
+  "description": "Kalkulasi matematika, konversi satuan, cek timezone, dan translate offline. Panggil via utility(kind, input, param). Kind calc: input='2+3*4'. Kind unit_convert: input='5 km', param='mi'. Kind timezone: input='Asia/Tokyo'. Kind translate: input='hello world', param='en->id'.",
+  "triggers": ["hitung", "kalkulator", "berapa", "kalkulasi", "konversi", "convert", "satuan", "km ke mil", "celsius ke fahrenheit", "jam berapa di", "timezone", "terjemahkan", "translate", "artinya apa"],
+  "defaultTier": 0,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "hitung 100 / 7",
+    "berapa 5 km dalam mil",
+    "konversi 30 celsius ke fahrenheit",
+    "jam berapa sekarang di Tokyo",
+    "terjemahkan 'good morning' ke bahasa Indonesia",
+    "berapa 25% dari 800"
+  ]
+}

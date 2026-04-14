@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    API 26+ adaptive icon. Background is a solid white drawable; the
+    foreground is the ChibiClaw logo rendered as density-specific PNGs
+    under `mipmap-{d}/ic_launcher_foreground.png`, inset into the 66dp
+    safe zone so circle / squircle masks never clip the ring or text.
+
+    `monochrome` is intentionally omitted — the logo is multi-color and
+    would read poorly if forced into Material You's single-tone themed
+    icon layer. We'll revisit once we have a dedicated silhouette asset.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

@@ -1,0 +1,54 @@
+---
+title: ChibiClaw v3 — Approval Gate Flow
+---
+flowchart TB
+    Input["CommandRequest\nmasuk dari Gateway"]
+
+    Input --> WL{"App target ada\ndi Whitelist?"}
+
+    WL -->|"Tidak"| Reject1["❌ REJECT\n+ Notifikasi: 'App tidak\nada di whitelist'"]
+
+    WL -->|"Ya"| Sensitive{"Aksi menyentuh\nfield sensitif?\n(password, payment,\nPIN, OTP)"}
+
+    Sensitive -->|"Ya"| Escalate["⬆️ Escalate severity\nke HIGH"]
+    Sensitive -->|"Tidak"| Classify
+
+    Escalate --> Classify
+
+    Classify["Classify Severity"]
+
+    Classify --> SevCheck{"Severity\nLevel?"}
+
+    SevCheck -->|"LOW"| AutoLow["✅ AUTO\nLangsung eksekusi\n+ Log"]
+    SevCheck -->|"MEDIUM"| AutoMed["✅ AUTO\nLangsung eksekusi\n+ Log detail"]
+    SevCheck -->|"HIGH"| AskUser["⚠️ ASK\nTampilkan overlay\nkonfirmasi"]
+    SevCheck -->|"BLOCKED"| Reject2["🚫 BLOCKED\nSelalu ditolak\n(factory reset, dll)"]
+
+    AskUser --> UserChoice{"User\nresponse?"}
+    UserChoice -->|"Confirm ✅"| Approved["✅ APPROVED\n→ Gemma Core"]
+    UserChoice -->|"Deny ❌"| Reject3["❌ DENIED\nby user"]
+    UserChoice -->|"Timeout 60s"| Reject4["❌ TIMEOUT\nAbort"]
+
+    AutoLow --> Approved
+    AutoMed --> Approved
+
+    Approved --> Log["📝 Log keputusan\nke command_history"]
+
+    Reject1 --> Log
+    Reject2 --> Log
+    Reject3 --> Log
+    Reject4 --> Log
+
+    subgraph Examples["Contoh Severity"]
+        direction LR
+        Ex_LOW["LOW:\nBuka app\nScroll\nBaca teks"]
+        Ex_MED["MEDIUM:\nKetik pesan\nKlik tombol\nShare content"]
+        Ex_HIGH["HIGH:\nKirim pesan\nTelepon\nInstall APK\nUbah setting"]
+        Ex_BLOCK["BLOCKED:\nFactory reset\nHapus semua data\nUninstall system app"]
+    end
+
+    style Reject1 fill:#fcebeb,stroke:#A32D2D
+    style Reject2 fill:#fcebeb,stroke:#A32D2D
+    style Reject3 fill:#fcebeb,stroke:#A32D2D
+    style Reject4 fill:#fcebeb,stroke:#A32D2D
+    style Approved fill:#eaf3de,stroke:#639922

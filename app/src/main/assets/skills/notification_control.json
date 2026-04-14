@@ -1,0 +1,16 @@
+{
+  "name": "notification_control",
+  "description": "Kontrol notifikasi: list semua notifikasi aktif, filter per app, dismiss/hapus, reply/balas langsung dari notifikasi (WA/Telegram/dll), hitung jumlah. Panggil via notificationControl(operation, packageName, notificationKey, replyText).",
+  "triggers": ["notifikasi", "notification", "list notif", "hapus notif", "dismiss notif", "balas notif", "reply notif", "berapa notifikasi", "notifikasi whatsapp", "notifikasi telegram", "clear notification"],
+  "defaultTier": 4,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "tampilkan semua notifikasi",
+    "notifikasi dari WhatsApp",
+    "hapus semua notifikasi",
+    "balas notifikasi WA dengan 'oke'",
+    "berapa jumlah notifikasi"
+  ]
+}

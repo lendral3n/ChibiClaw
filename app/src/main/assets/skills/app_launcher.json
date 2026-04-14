@@ -1,0 +1,15 @@
+{
+  "name": "app_launcher",
+  "description": "Buka app terinstall. WAJIB dipanggil via launch_app(appName) — BUKAN intent_send. PackageManager yang resolve nama ke package yang benar, jangan tebak package string.",
+  "triggers": ["buka", "open", "launch", "jalankan", "start"],
+  "defaultTier": 1,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "Buka WhatsApp",
+    "Open TikTok",
+    "Launch Honor of Kings",
+    "Jalankan YouTube Music"
+  ]
+}

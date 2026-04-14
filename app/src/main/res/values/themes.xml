@@ -1,0 +1,4 @@
+<resources>
+    <!-- Base theme for Compose app — AppCompat provides the host, Compose handles theming -->
+    <style name="Theme.ChibiClaw" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>

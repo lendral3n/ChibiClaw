@@ -1,0 +1,17 @@
+{
+  "name": "hardware_control",
+  "description": "Kontrol hardware device: IR blaster (remote TV/AC), NFC toggle, vibrate/haptic, auto-rotate, screen timeout, refresh rate. Panggil via deviceControl(category='hardware', target, command, value).",
+  "triggers": ["ir blaster", "remote tv", "remote ac", "infrared", "nfc", "getar", "vibrate", "haptic", "rotasi", "auto rotate", "screen timeout", "refresh rate", "60hz", "120hz", "putar layar"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "nyalakan NFC",
+    "matikan auto rotate",
+    "screen timeout 5 menit",
+    "vibrate hp",
+    "set refresh rate 120Hz",
+    "kirim sinyal IR TV power"
+  ]
+}

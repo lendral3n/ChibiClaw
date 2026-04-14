@@ -1,0 +1,51 @@
+---
+title: ChibiClaw v3 — Gemma Model Routing (E2B vs E4B)
+---
+flowchart TB
+    Input["Perintah Masuk"]
+
+    subgraph E2B_Phase["GEMMA E2B (Fast Model — selalu loaded)"]
+        E2B["Gemma E2B\n~1.3GB RAM\n~20-30 tok/s"]
+        IntentClass["Intent Classification"]
+        SimpleCheck{"Task sederhana?\n(1-2 steps, known pattern)"}
+    end
+
+    subgraph E4B_Phase["GEMMA E4B (Smart Model — loaded on-demand)"]
+        LoadCheck{"E4B sudah\nloaded?"}
+        Load["Load E4B\n~3-5s cold start\n~2.5GB RAM"]
+        E4B["Gemma E4B\nThinking Mode\nFunction Calling\nVision Understanding"]
+        Plan["Complex Action Plan\n(multi-step JSON)"]
+    end
+
+    subgraph Lifecycle["MODEL LIFECYCLE"]
+        Timer["Idle Timer\n(5 menit)"]
+        Unload["Unload E4B\n(free RAM)"]
+        Battery{"Battery\n< 15%?"}
+        E2BOnly["E2B Only Mode\n(hemat baterai)"]
+    end
+
+    Input --> E2B
+    E2B --> IntentClass
+    IntentClass --> SimpleCheck
+
+    SimpleCheck -->|"Ya: telepon, buka app,\nset alarm, toggle wifi"| DirectExec["Direct Execution\n(E2B cukup)"]
+
+    SimpleCheck -->|"Tidak: multi-step,\nUI interaction,\nvision needed"| LoadCheck
+
+    LoadCheck -->|"Ya"| E4B
+    LoadCheck -->|"Tidak"| Load
+    Load --> E4B
+    E4B --> Plan
+    Plan --> Exec["Execution Engine"]
+
+    E4B --> Timer
+    Timer -->|"5 menit idle"| Unload
+
+    Battery -->|"Ya"| E2BOnly
+    Battery -->|"Tidak"| E2B
+
+    DirectExec --> Exec
+
+    style E2B_Phase fill:#eaf3de,stroke:#639922
+    style E4B_Phase fill:#faeeda,stroke:#BA7517
+    style Lifecycle fill:#f1efe8,stroke:#888780

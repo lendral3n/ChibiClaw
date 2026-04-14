@@ -1,0 +1,14 @@
+{
+  "name": "phone_call",
+  "description": "Make a phone call to a contact or number",
+  "triggers": ["telepon", "call", "hubungi", "ring", "panggil"],
+  "defaultTier": 1,
+  "intentAction": "android.intent.action.CALL",
+  "intentUriTemplate": "tel:{number}",
+  "targetPackage": "",
+  "examples": [
+    "Telepon Budi",
+    "Call mom",
+    "Hubungi 0812345678"
+  ]
+}

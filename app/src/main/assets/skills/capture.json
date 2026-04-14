@@ -1,0 +1,17 @@
+{
+  "name": "capture",
+  "description": "Buka kamera untuk foto/video, scan QR code/barcode, atau OCR dari gambar gallery. Panggil via capture(kind, uri). Kind: photo (buka kamera foto), video (buka kamera video), qr_scan (scan barcode dari gambar), ocr_gallery (ekstrak teks dari gambar).",
+  "triggers": ["foto", "photo", "kamera", "camera", "video", "rekam video", "scan qr", "scan barcode", "qr code", "ocr", "baca gambar", "ambil foto", "selfie"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "ambil foto",
+    "buka kamera",
+    "rekam video",
+    "scan QR code",
+    "scan barcode",
+    "baca teks dari gambar"
+  ]
+}

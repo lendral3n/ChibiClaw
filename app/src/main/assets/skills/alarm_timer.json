@@ -1,0 +1,14 @@
+{
+  "name": "alarm_timer",
+  "description": "Pasang alarm. WAJIB dipanggil via set_alarm(hour, minute, label) — BUKAN intent_send.",
+  "triggers": ["alarm", "timer", "set alarm", "pasang alarm", "ingatkan", "remind", "bangunin"],
+  "defaultTier": 1,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "Pasang alarm jam 7 pagi",
+    "Set timer 30 menit",
+    "Bangunin aku jam 6"
+  ]
+}

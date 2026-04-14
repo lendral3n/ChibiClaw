@@ -1,0 +1,16 @@
+{
+  "name": "contact_manage",
+  "description": "Kelola kontak: tambah kontak baru, edit kontak (ubah nama/nomor), hapus kontak, cari kontak. Panggil via contactManage(operation, name, phone, email, contactId).",
+  "triggers": ["tambah kontak", "buat kontak", "kontak baru", "edit kontak", "ubah kontak", "hapus kontak", "delete kontak", "cari kontak", "simpan nomor"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "tambah kontak Budi 08123456789",
+    "simpan nomor 0812345 dengan nama Ani",
+    "hapus kontak Dedi",
+    "edit kontak Budi ganti nomor 0899999",
+    "cari kontak yang namanya Ahmad"
+  ]
+}

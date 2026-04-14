@@ -1,0 +1,13 @@
+{
+  "name": "telegram_messaging",
+  "description": "Kirim pesan Telegram ke kontak atau grup",
+  "triggers": ["telegram", "tele", "kirim pesan telegram", "pesan tele", "balas telegram"],
+  "defaultTier": 1,
+  "intentAction": "android.intent.action.SEND",
+  "targetPackage": "org.telegram.messenger",
+  "examples": [
+    "kirim pesan telegram ke Budi",
+    "telegram ke channel grup",
+    "balas telegram dari Sari"
+  ]
+}

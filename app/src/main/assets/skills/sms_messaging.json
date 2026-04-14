@@ -1,0 +1,13 @@
+{
+  "name": "sms_messaging",
+  "description": "Send SMS to a contact or number",
+  "triggers": ["sms", "kirim sms", "text", "send sms", "pesan", "kirim pesan singkat"],
+  "defaultTier": 1,
+  "intentAction": "android.intent.action.SENDTO",
+  "intentUriTemplate": "sms:{number}",
+  "targetPackage": "",
+  "examples": [
+    "Kirim SMS ke Budi bilang sudah sampai",
+    "Text mom I'm on my way"
+  ]
+}

@@ -1,0 +1,58 @@
+---
+title: ChibiClaw v3 — Skill Loading & Execution Flow
+---
+flowchart TB
+    User["User Command:\n'Balas WA Budi Otw'"]
+
+    subgraph Classification["INTENT CLASSIFICATION (Gemma E2B)"]
+        Classify["Classify Intent\n(fast, < 500ms)"]
+        Match["Skill Matcher\n(match triggers)"]
+    end
+
+    subgraph SkillStore["SKILL STORAGE"]
+        BuiltIn["Built-in Skills\n(assets/skills/*.json)"]
+        Custom["Custom Skills\n(user-defined)"]
+        Cache["Skill Cache\n(frequently used)"]
+    end
+
+    subgraph Loading["SKILL LOADING"]
+        Loader["Skill Loader"]
+        Selected["Selected Skill:\nwhatsapp_messaging"]
+        Schema["Function Call Schema\n(dari skill definition)"]
+    end
+
+    subgraph Planning["TASK PLANNING (Gemma E4B)"]
+        Prompt["Context Assembly:\nSystem Prompt\n+ Skill Definition\n+ Memory\n+ UI State (if any)"]
+        Think["Thinking Mode:\nStep-by-step reasoning"]
+        Plan["Action Plan Output:\nJSON function calls"]
+    end
+
+    subgraph Execution["EXECUTION"]
+        Router["Execution Router"]
+        Step1["Step 1: content_query"]
+        Step2["Step 2: intent_send"]
+        Step3["Step 3: ui_interact"]
+    end
+
+    User --> Classify
+    Classify --> Match
+    Match --> BuiltIn
+    Match --> Custom
+    Match --> Cache
+    BuiltIn --> Loader
+    Custom --> Loader
+    Cache --> Loader
+    Loader --> Selected
+    Selected --> Schema
+    Schema --> Prompt
+    Prompt --> Think
+    Think --> Plan
+    Plan --> Router
+    Router --> Step1
+    Step1 --> Step2
+    Step2 --> Step3
+    Step3 --> Done["✅ Report to User"]
+
+    NoMatch["Tidak ada skill cocok"] -.-> Fallback["Gemma plan dari\nfunction primitives"]
+    Match -.->|"no match"| NoMatch
+    Fallback --> Router

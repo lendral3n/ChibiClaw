@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Deep/Tech colors -->
+    <color name="chibi_primary">#5770C3</color>
+    <color name="chibi_background">#F7F8FE</color>
+    <color name="chibi_text">#2A2A35</color>
+    
+    <!-- Glassmorphic / cards -->
+    <color name="chibi_surface">#EAEFFF</color>
+    <color name="chibi_card">#FDFCFF</color>
+    <color name="chibi_stroke">#D4DCEF</color>
+
+    <!-- States -->
+    <color name="chibi_green">#79C289</color>
+    <color name="chibi_red">#EB8080</color>
+</resources>

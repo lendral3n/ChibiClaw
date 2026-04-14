@@ -1,0 +1,49 @@
+---
+title: ChibiClaw v3 — State Machine (7 States)
+---
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> PLANNING : Perintah baru masuk\n(lolos approval)
+
+    PLANNING --> EXECUTING : Plan siap\n(action steps generated)
+    PLANNING --> WAITING_USER : Butuh info tambahan\nsebelum bisa plan
+
+    EXECUTING --> VERIFYING : Step selesai dieksekusi
+    EXECUTING --> PAUSED : User interrupt\n(tekan pause)
+    EXECUTING --> WAITING_USER : Aksi HIGH severity\nbutuh konfirmasi
+
+    VERIFYING --> EXECUTING : Step berhasil ✅\nlanjut step berikutnya
+    VERIFYING --> COMPLETED : Step TERAKHIR berhasil ✅\nsemua step selesai
+    VERIFYING --> ERROR_RECOVERY : Step GAGAL ❌
+
+    ERROR_RECOVERY --> EXECUTING : Re-plan berhasil\nretry (< 3x)
+    ERROR_RECOVERY --> IDLE : Max retry exceeded\nabort + lapor user
+
+    WAITING_USER --> EXECUTING : User confirm ✅\natau provide info
+    WAITING_USER --> IDLE : User cancel ❌\natau timeout 60s
+
+    PAUSED --> EXECUTING : User resume ▶️
+    PAUSED --> IDLE : User cancel ❌
+
+    COMPLETED --> IDLE : Cleanup selesai\nlapor hasil ke user
+
+    note right of IDLE
+        Kill Switch bisa dipanggil
+        dari state MANAPUN
+        → langsung ke IDLE
+    end note
+
+    note right of EXECUTING
+        Timeout: 5 detik per step
+        Jika timeout → VERIFYING
+        (dianggap gagal)
+    end note
+
+    note right of ERROR_RECOVERY
+        Max 3 retry per step
+        Setiap retry:
+        1. Re-scan UI
+        2. Kirim context gagal ke Gemma
+        3. Gemma buat plan alternatif
+    end note

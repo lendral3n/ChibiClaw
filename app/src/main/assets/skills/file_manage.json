@@ -1,0 +1,19 @@
+{
+  "name": "file_manage",
+  "description": "Kelola file: list folder, info file, copy, move, delete, share, zip, search, cek penyimpanan, baca file teks, buat folder. Panggil via fileManage(operation, path, destination).",
+  "triggers": ["file", "folder", "list file", "isi folder", "copy file", "pindah file", "hapus file", "share file", "kirim file", "zip", "compress", "cari file", "info penyimpanan", "storage", "baca file", "buat folder"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "list isi folder Download",
+    "copy file ke Documents",
+    "hapus file gambar.jpg",
+    "share file ke WhatsApp",
+    "zip folder Download",
+    "cari file yang berisi 'report'",
+    "berapa sisa penyimpanan",
+    "baca file catatan.txt"
+  ]
+}

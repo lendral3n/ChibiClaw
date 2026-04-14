@@ -1,0 +1,16 @@
+{
+  "name": "schedule_task",
+  "description": "Jadwalkan tugas otomatis: buat jadwal (one-time atau recurring), list semua jadwal, batalkan jadwal. Menggunakan WorkManager. Minimum interval 15 menit untuk periodic. Panggil via scheduleTask(operation, command, scheduleTime, repeatInterval, taskId).",
+  "triggers": ["jadwal", "schedule", "ingatkan", "remind", "otomatis", "berkala", "tiap", "setiap", "rutin", "recurring", "timer", "jadwal tugas"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "ingatkan aku dalam 30 menit",
+    "jadwalkan cek email tiap 1 jam",
+    "list semua jadwal",
+    "batalkan jadwal X",
+    "hapus semua jadwal"
+  ]
+}

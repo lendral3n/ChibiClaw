@@ -1,0 +1,15 @@
+{
+  "name": "shizuku_control",
+  "description": "Perintah sistem privileged via Shizuku (ADB-level). Untuk hal yang tidak bisa dilakukan tool biasa. Butuh Shizuku Manager aktif. Kind: put_secure/put_global/put_system (tulis settings), get_secure/get_global/get_system (baca settings), force_stop (paksa stop app), grant_permission/revoke_permission (kelola izin), uninstall_user (uninstall app).",
+  "triggers": ["force stop", "paksa berhenti", "hapus app", "uninstall", "izin app", "permission app", "settings secure", "settings global"],
+  "defaultTier": 4,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "force stop TikTok",
+    "uninstall app Facebook",
+    "berikan izin kamera ke WhatsApp",
+    "cabut izin lokasi dari TikTok"
+  ]
+}

@@ -1,0 +1,114 @@
+---
+title: ChibiClaw v3 — Architecture Overview
+---
+flowchart TB
+    subgraph Gateway["COMMAND GATEWAY"]
+        AIDL["AIDL Bridge\n(Character App)"]
+        Voice["Voice Engine\n(Gemma E2B Audio)"]
+        Notif["Notification\nListener"]
+        Cron["Cron Scheduler\n(Proactive Tasks)"]
+        Queue["Command Queue\n(Priority-based)"]
+    end
+
+    subgraph Approval["APPROVAL GATE"]
+        Whitelist["App Whitelist\nCheck"]
+        Sensitive["Sensitive Field\nDetector"]
+        Severity["Severity\nClassifier"]
+        Policy["Policy Engine\n(auto/ask/deny)"]
+        Confirm["User Confirmation\nOverlay"]
+    end
+
+    subgraph Gemma["GEMMA COGNITIVE CORE"]
+        E2B["Gemma E2B\n(Fast: Intent Classify)"]
+        E4B["Gemma E4B\n(Smart: Task Planning)"]
+        Context["Context Assembler\n(Memory + UI + Skills)"]
+        FC["Function Call\nParser"]
+    end
+
+    subgraph Skills["SKILL SYSTEM"]
+        Loader["Skill Loader"]
+        Registry["Skill Registry"]
+        BuiltIn["Built-in Skills\n(JSON files)"]
+        Custom["Custom Skills\n(User-defined)"]
+    end
+
+    subgraph Memory["MEMORY"]
+        RoomDB[("Room DB\n(FTS5)")]
+        CmdHistory["Command\nHistory"]
+        ConvCtx["Conversation\nContext"]
+        AppPattern["App Patterns\n(cached UI)"]
+        ContactCtx["Contact\nContext"]
+    end
+
+    subgraph Executor["EXECUTION ENGINE"]
+        Router["Execution Router"]
+        T1["Tier 1: Intent API\n(cepat, aman)"]
+        T2["Tier 2: Content Provider\n(baca/tulis data)"]
+        T3["Tier 3: Accessibility\n(UI automation)"]
+        T4["Tier 4: Shizuku Shell\n(last resort)"]
+        Verify["Verification\nLoop"]
+        ErrorRec["Error\nRecovery"]
+    end
+
+    subgraph Perception["PERCEPTION (LAZY)"]
+        PathA["Path A:\nAccessibility Tree\n+ Distiller"]
+        PathB["Path B:\nScreenshot\n+ Gemma Vision"]
+    end
+
+    subgraph State["STATE MACHINE"]
+        SM["7-State FSM\n(IDLE → COMPLETED)"]
+        Kill["Kill Switch"]
+    end
+
+    %% Gateway flow
+    AIDL --> Queue
+    Voice --> Queue
+    Notif --> Queue
+    Cron --> Queue
+
+    %% Approval flow
+    Queue --> Whitelist
+    Whitelist --> Sensitive
+    Sensitive --> Severity
+    Severity --> Policy
+    Policy -->|ask| Confirm
+    Confirm --> E2B
+    Policy -->|auto| E2B
+
+    %% Cognitive flow
+    E2B -->|simple task| FC
+    E2B -->|complex task| E4B
+    E4B --> FC
+    Context --> E4B
+    Loader --> Context
+    Registry --> Loader
+    BuiltIn --> Registry
+    Custom --> Registry
+    RoomDB --> Context
+    CmdHistory --> RoomDB
+    ConvCtx --> RoomDB
+    AppPattern --> RoomDB
+    ContactCtx --> RoomDB
+
+    %% Execution flow
+    FC --> Router
+    Router --> T1
+    Router --> T2
+    Router --> T3
+    Router --> T4
+    T3 --> PathA
+    T3 --> PathB
+
+    %% Verification
+    T1 --> Verify
+    T2 --> Verify
+    T3 --> Verify
+    T4 --> Verify
+    Verify -->|success| SM
+    Verify -->|fail| ErrorRec
+    ErrorRec -->|retry| Router
+    ErrorRec -->|abort| SM
+
+    %% State
+    SM --> Kill
+    SM -.->|update progress| AIDL

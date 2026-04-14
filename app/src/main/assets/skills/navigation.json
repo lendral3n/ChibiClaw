@@ -1,0 +1,12 @@
+{
+  "name": "navigation",
+  "description": "Buka Google Maps dan arahkan ke tujuan",
+  "triggers": ["maps", "navigasi", "arahkan ke", "rute ke", "petunjuk arah", "gmaps", "google maps", "pergi ke", "tunjukkan jalan"],
+  "defaultTier": 1,
+  "intentAction": "android.intent.action.VIEW",
+  "examples": [
+    "navigasi ke Monas",
+    "rute ke Bandara Soekarno-Hatta",
+    "buka maps ke kantor"
+  ]
+}

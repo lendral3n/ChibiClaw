@@ -1,0 +1,69 @@
+---
+title: ChibiClaw v3 — Intent-First Execution Hierarchy
+---
+flowchart TB
+    Start["Aksi dari Gemma\n(Function Call JSON)"] --> Router{"Execution\nRouter"}
+
+    Router -->|"Bisa pakai Intent?"| T1
+    Router -->|"Perlu baca/tulis data?"| T2
+    Router -->|"Perlu interaksi UI?"| T3
+    Router -->|"Perlu akses sistem?"| T4
+
+    subgraph T1["🟢 TIER 1: Intent API"]
+        direction TB
+        T1_desc["Paling cepat, paling aman\nTanpa permission khusus"]
+        T1_1["ACTION_CALL\n(telepon)"]
+        T1_2["ACTION_SEND\n(share content)"]
+        T1_3["ACTION_VIEW\n(deep links)"]
+        T1_4["Settings Intents\n(buka setting)"]
+        T1_5["ACTION_SET_ALARM\n(alarm/timer)"]
+        T1_6["Launch Intent\n(buka app)"]
+    end
+
+    subgraph T2["🔵 TIER 2: Content Provider & System API"]
+        direction TB
+        T2_desc["Baca/tulis data lewat API resmi\nButuh permission standar"]
+        T2_1["ContactsContract\n(baca kontak)"]
+        T2_2["CalendarContract\n(baca/tulis jadwal)"]
+        T2_3["Telephony.Sms\n(baca SMS)"]
+        T2_4["MediaStore\n(akses media)"]
+        T2_5["WifiManager\n(toggle WiFi)"]
+        T2_6["AudioManager\n(atur volume)"]
+    end
+
+    subgraph T3["🟡 TIER 3: Accessibility Service"]
+        direction TB
+        T3_desc["UI automation\nButuh user enable di Settings"]
+        T3_1["Click / Type\n(klik tombol, ketik teks)"]
+        T3_2["Scroll / Swipe\n(navigasi list)"]
+        T3_3["Read UI Tree\n(baca konten layar)"]
+        T3_4["Gemma Vision\n(screenshot fallback)"]
+    end
+
+    subgraph T4["🔴 TIER 4: Shizuku / ADB Shell"]
+        direction TB
+        T4_desc["Last resort\nButuh Wireless Debugging setup"]
+        T4_1["Force Stop App\n(am force-stop)"]
+        T4_2["Install APK\n(pm install)"]
+        T4_3["System Settings\n(settings put)"]
+        T4_4["Input Events\n(input tap/text)"]
+    end
+
+    T1 -->|"Gagal?"| T2
+    T2 -->|"Tidak bisa?"| T3
+    T3 -->|"Butuh sistem?"| T4
+
+    T1 --> Verify["✅ Verification Loop"]
+    T2 --> Verify
+    T3 --> Verify
+    T4 --> Verify
+
+    Verify -->|"Success"| Done["Task Step Complete"]
+    Verify -->|"Fail"| Retry{"Retry\n< 3x?"}
+    Retry -->|"Ya"| Router
+    Retry -->|"Tidak"| Abort["Abort → Lapor User"]
+
+    style T1 fill:#eaf3de,stroke:#639922
+    style T2 fill:#e6f1fb,stroke:#378ADD
+    style T3 fill:#faeeda,stroke:#BA7517
+    style T4 fill:#fcebeb,stroke:#A32D2D

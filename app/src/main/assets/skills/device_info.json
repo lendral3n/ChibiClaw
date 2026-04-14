@@ -1,0 +1,18 @@
+{
+  "name": "device_info",
+  "description": "Info device lengkap: identitas HP (merek/model), CPU/GPU/chipset, RAM, storage, jaringan, daftar sensor, info layar, versi OS/kernel. Panggil via deviceInfo(target).",
+  "triggers": ["info hp", "info device", "spek hp", "spesifikasi", "cpu apa", "chipset", "gpu", "ram berapa", "resolusi layar", "sensor apa aja", "versi android", "kernel", "model hp", "merek hp"],
+  "defaultTier": 0,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "spek HP ku apa",
+    "CPU apa",
+    "berapa RAM",
+    "resolusi layar berapa",
+    "sensor apa aja",
+    "versi Android berapa",
+    "info device lengkap"
+  ]
+}

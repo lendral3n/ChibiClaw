@@ -1,0 +1,61 @@
+---
+title: ChibiClaw v3 — Dual Path Perception
+---
+flowchart TB
+    Trigger["Execution Engine butuh\ninformasi layar\n(Tier 3 diaktifkan)"]
+
+    Trigger --> PathA
+
+    subgraph PathA["PATH A: Accessibility Tree (Primary)"]
+        direction TB
+        A1["Accessibility Service\ngetRootInActiveWindow()"]
+        A2["Raw XML Hierarchy\n(5000+ lines)"]
+        A3["Semantic Distiller\n(Token Guard)"]
+        A4["Pruning:\nHapus non-interactive nodes\nHapus layout containers\nHapus decorative elements"]
+        A5["Labeling:\nParent-child context\n'Send button in WhatsApp chat'"]
+        A6["Coordinate Extraction:\nClickable bounds (x, y, w, h)"]
+        A7["Simplified UI Map\n(~400 lines, token-efficient)"]
+
+        A1 --> A2
+        A2 --> A3
+        A3 --> A4
+        A4 --> A5
+        A5 --> A6
+        A6 --> A7
+    end
+
+    A7 --> Quality{"Interactive nodes\n> 10?"}
+
+    Quality -->|"Ya ✅"| UseA["Gunakan Path A\n(cepat, hemat resource)"]
+
+    Quality -->|"Tidak ❌\n(UI tree terlalu dangkal)"| PathB
+
+    subgraph PathB["PATH B: Vision Fallback"]
+        direction TB
+        B1["MediaProjection API\nScreenshot capture"]
+        B2["Bitmap → Gemma E4B"]
+        B3["Vision Analysis:\nUI element detection\nBounding box extraction\nText recognition (OCR)\nButton/input identification"]
+        B4["Virtual UI Map\n(dari vision output)"]
+
+        B1 --> B2
+        B2 --> B3
+        B3 --> B4
+    end
+
+    B4 --> UseB["Gunakan Path B\n(lebih lambat, tapi universal)"]
+
+    UseA --> Output["UI Map → Gemma E4B\nuntuk action planning"]
+    UseB --> Output
+
+    subgraph WhenPathB["Kapan Path B Diaktifkan?"]
+        direction LR
+        Case1["Game / Canvas app\n(no accessibility tree)"]
+        Case2["WebView content\n(limited tree)"]
+        Case3["Custom rendered UI\n(Flutter, React Native)"]
+        Case4["Path A returns\n< 10 nodes"]
+    end
+
+    style PathA fill:#eaf3de,stroke:#639922
+    style PathB fill:#faeeda,stroke:#BA7517
+    style UseA fill:#eaf3de,stroke:#639922
+    style UseB fill:#faeeda,stroke:#BA7517

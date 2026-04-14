@@ -1,0 +1,18 @@
+{
+  "name": "network_control",
+  "description": "Kontrol jaringan: info WiFi detail (SSID/IP/signal), toggle mobile data, hotspot, airplane mode, DNS private, status VPN, info koneksi. Panggil via deviceControl(category='network', target, command, value).",
+  "triggers": ["mobile data", "data seluler", "hotspot", "tethering", "airplane mode", "mode pesawat", "dns", "private dns", "vpn", "info wifi", "ip address", "sinyal wifi", "koneksi", "data usage"],
+  "defaultTier": 2,
+  "intentAction": "",
+  "intentUriTemplate": "",
+  "targetPackage": "",
+  "examples": [
+    "nyalakan mobile data",
+    "matikan hotspot",
+    "aktifkan airplane mode",
+    "set DNS ke dns.google",
+    "cek info WiFi",
+    "berapa IP address ku",
+    "status VPN"
+  ]
+}

@@ -1,0 +1,82 @@
+---
+title: ChibiClaw v3 — Execution Flow (Contoh: "Balas WA Budi Otw")
+---
+sequenceDiagram
+    autonumber
+    participant U as User (Voice/App)
+    participant GW as Command Gateway
+    participant AG as Approval Gate
+    participant E2 as Gemma E2B (Fast)
+    participant E4 as Gemma E4B (Smart)
+    participant SK as Skill Loader
+    participant MEM as Room DB (Memory)
+    participant EX as Execution Engine
+    participant T1 as Tier 1: Intent API
+    participant T2 as Tier 2: Content Provider
+    participant T3 as Tier 3: Accessibility
+    participant VF as Verification
+
+    Note over U, VF: FASE 1: INPUT & APPROVAL
+
+    U->>GW: "Fuu, balas WA Budi bilang Otw"
+    GW->>GW: Normalize → CommandRequest
+    GW->>AG: Check approval
+    AG->>AG: Whitelist: WhatsApp ✅
+    AG->>AG: Sensitive: No password fields
+    AG->>AG: Severity: MEDIUM (kirim pesan)
+    AG->>AG: Policy: AUTO → proceed
+    AG-->>GW: APPROVED
+
+    Note over E2, MEM: FASE 2: INTENT CLASSIFICATION (E2B - cepat)
+
+    GW->>E2: Classify intent
+    E2->>E2: Intent = "send_whatsapp_message"
+    E2->>SK: Load skill: whatsapp_messaging
+    SK-->>E2: Skill definition loaded
+    E2-->>GW: Complex task → route ke E4B
+
+    Note over E4, MEM: FASE 3: TASK PLANNING (E4B - thinking mode)
+
+    GW->>E4: Plan task with context
+    E4->>MEM: Query kontak "Budi"
+    MEM-->>E4: Budi = +6281234567890
+    E4->>E4: Thinking: Intent deep link + 1x accessibility click
+    E4-->>EX: Action Plan (4 steps)
+
+    Note over EX, VF: FASE 4: EXECUTION (Intent-First)
+
+    rect rgb(230, 245, 230)
+        EX->>T2: Step 1: content_query(contacts, "Budi")
+        T2-->>EX: phone = +6281234567890 ✅
+    end
+
+    rect rgb(230, 245, 230)
+        EX->>T1: Step 2: intent_send(ACTION_VIEW, wa.me/62812...?text=Otw)
+        T1->>T1: Build Intent → startActivity()
+        T1-->>EX: WhatsApp opened with text pre-filled ✅
+    end
+
+    EX->>EX: wait(2 seconds) — tunggu WA load
+
+    rect rgb(255, 245, 230)
+        EX->>T3: Step 3: scan_ui → find send button
+        T3->>T3: Accessibility getRootInActiveWindow()
+        T3->>T3: Distiller → find "send" button
+        T3-->>EX: Send button found at node_id="send_btn"
+    end
+
+    rect rgb(255, 245, 230)
+        EX->>T3: Step 4: ui_interact(click, "send_btn")
+        T3->>T3: performAction(ACTION_CLICK)
+        T3-->>EX: Click performed ✅
+    end
+
+    Note over EX, VF: FASE 5: VERIFICATION
+
+    EX->>VF: Verify: pesan terkirim?
+    VF->>T3: Re-scan UI
+    T3-->>VF: Text "Otw" muncul di chat ✅
+    VF-->>EX: VERIFIED
+
+    EX->>MEM: Log task success
+    EX-->>U: "Siap, pesan 'Otw' sudah dikirim ke Budi!"
