@@ -1,15 +1,179 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ═══════════════════════════════════════════════════════════════
+# KEAMANAN — JANGAN PERNAH COMMIT FILE INI
+# ═══════════════════════════════════════════════════════════════
+
+# Keystore & signing (file .jks kamu ada di sini — AMAN)
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore/
+signing/
+release-keystore.*
+
+# File properties signing (bisa berisi password keystore)
+*signing*.properties
+*release*.properties
+*keystore*.properties
+*key*.properties
+*secret*.properties
+
+# Environment & secrets
+.env
+.env.*
+*.env
+secrets.yml
+secrets.yaml
+secrets.json
+*credentials*.json
+*credentials*.xml
+service-account*.json
+google-services-private.json
+*secrets*.json
+*secrets*.yml
+*secrets*.yaml
+
+# API keys, tokens, credentials dalam bentuk apapun
+*api_key*
+*api-key*
+*apikey*
+*secret_key*
+*access_token*
+*private_key*
+*.pem
+*.p8
+
+
+# ═══════════════════════════════════════════════════════════════
+# ANDROID
+# ═══════════════════════════════════════════════════════════════
+
+# Build outputs
+/build/
+app/build/
+**/build/
+
+# APK & AAB hasil build (didistribusikan via GitHub Release, bukan git)
+*.apk
+*.aab
+*.aar
+
+# Local configuration — berisi path SDK lokal masing-masing developer
 local.properties
+
+# ProGuard generated files
+/app/proguard-generated/
+
+# Android test results
+/app/androidTest/
+
+# NDK / CMake
+.externalNativeBuild/
+.cxx/
+*.so
+
+# Captures folder (Android Studio profiler)
+/captures/
+
+
+# ═══════════════════════════════════════════════════════════════
+# GRADLE
+# ═══════════════════════════════════════════════════════════════
+
+.gradle/
+**/gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+build/
+*.iml
+
+# Gradle cache files
+gradle-app.setting
+.gradletasknamecache
+
+
+# ═══════════════════════════════════════════════════════════════
+# AI MODEL FILES (terlalu besar untuk git, distribusikan sendiri)
+# ═══════════════════════════════════════════════════════════════
+
+# LiteRT-LM model files
+*.litertlm
+*.tflite
+*.bin
+*.onnx
+
+# Model direktori (assets/models/ berisi placeholder saja)
+app/src/main/assets/models/*.litertlm
+app/src/main/assets/models/*.tflite
+
+
+# ═══════════════════════════════════════════════════════════════
+# IDE — ANDROID STUDIO / INTELLIJ
+# ═══════════════════════════════════════════════════════════════
+
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetDropDown.xml
+.idea/androidTestResultsUserPreferences.xml
+.idea/*.iml
+.idea/shelf/
+
+# Android Studio generated
+*.orig.xml
+*~
+
+# Avoid ignoring .idea entirely — beberapa file berguna untuk tim
+# (run configs, code style, inspections)
+
+
+# ═══════════════════════════════════════════════════════════════
+# OS FILES
+# ═══════════════════════════════════════════════════════════════
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+
+# ═══════════════════════════════════════════════════════════════
+# LOG & TEMP
+# ═══════════════════════════════════════════════════════════════
+
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+logs/
+tmp/
+temp/
+
+# Test & coverage reports
+/reports/
+/test-results/
+coverage/
+*.coverage
+*.lcov
+jacoco/
