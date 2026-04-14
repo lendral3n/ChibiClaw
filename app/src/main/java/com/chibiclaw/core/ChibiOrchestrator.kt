@@ -22,6 +22,7 @@ import com.chibiclaw.executor.UiInteractAction
 import com.chibiclaw.gateway.CommandGateway
 import com.chibiclaw.memory.MemoryManager
 import com.chibiclaw.safety.ApprovalGate
+import com.chibiclaw.skills.SkillRegistry
 import com.chibiclaw.safety.ApprovalPolicy
 import com.chibiclaw.safety.ConfirmationOverlay
 import com.chibiclaw.state.ChibiState
@@ -58,6 +59,7 @@ class ChibiOrchestrator @Inject constructor(
     private val modelRouter: ModelRouter,
     private val fastPathMatcher: FastPathMatcher,
     private val textActionParser: TextActionParser,
+    private val skillRegistry: SkillRegistry,
     private val stepRunner: StepRunner,
     private val devLogger: DevLogger
 ) {
@@ -93,7 +95,7 @@ class ChibiOrchestrator @Inject constructor(
     // LiteRT-LM caches the ToolSet inside the Conversation at create time, so
     // swapping instances per-command would have no effect — the first one wins.
     private val chibiTools: ChibiClawTools by lazy {
-        ChibiClawTools { action ->
+        ChibiClawTools(skillRegistry = skillRegistry) { action ->
             devLogger.i("TOOL", "Gemma called: ${action::class.simpleName} → $action")
             when (action) {
                 // Gemma is asking the user a question — show it in chat as Fuu's bubble.

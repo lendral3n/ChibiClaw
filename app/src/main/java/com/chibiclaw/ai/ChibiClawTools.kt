@@ -1,14 +1,34 @@
 package com.chibiclaw.ai
 
 import com.chibiclaw.executor.*
+import com.chibiclaw.skills.SkillRegistry
 import com.google.ai.edge.litertlm.Tool
 import com.google.ai.edge.litertlm.ToolParam
 import com.google.ai.edge.litertlm.ToolSet
 import kotlinx.coroutines.runBlocking
 
 class ChibiClawTools(
+    private val skillRegistry: SkillRegistry,
     private val onAction: suspend (ChibiAction) -> String
 ) : ToolSet {
+
+    /**
+     * Agentic skill lookup — model memanggil tool ini sendiri saat butuh
+     * panduan cara menyelesaikan suatu task. Mengembalikan skill guide yang
+     * relevan dari SkillRegistry tanpa melalui ExecutionRouter (bukan aksi device).
+     */
+    @Tool(
+        description = "Cari panduan/skill untuk task tertentu sebelum eksekusi. " +
+            "Panggil ini ketika tidak yakin tool atau langkah mana yang tepat. " +
+            "Contoh: lookup_skill(query=\"kirim whatsapp\"), lookup_skill(query=\"atur alarm\"). " +
+            "Mengembalikan panduan lengkap termasuk intent action, URI template, dan contoh."
+    )
+    fun lookupSkill(
+        @ToolParam(description = "Query deskriptif tentang task yang ingin dilakukan (bahasa bebas)") query: String
+    ): Map<String, String> {
+        val guide = skillRegistry.searchByQuery(query)
+        return mapOf("guide" to guide)
+    }
 
     @Tool(
         description = "Kirim Intent API Android asli. Gunakan HANYA action string resmi Android seperti: " +

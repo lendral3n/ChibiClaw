@@ -180,6 +180,24 @@ class GemmaInference @Inject constructor(
         return conv
     }
 
+    /**
+     * Safety net: potong system prompt jika melebihi batas karakter aman.
+     * 12.000 chars ≈ ~3.000 token — menyisakan ~1.000 token untuk pesan
+     * user + tool schemas yang di-inject LiteRT-LM secara otomatis.
+     * Truncation hanya terjadi sebagai last resort; dalam kondisi normal
+     * prompt sudah jauh di bawah batas setelah refactor agentic skill lookup.
+     */
+    private fun guardPromptLength(systemPrompt: String): String {
+        val limit = 12_000
+        return if (systemPrompt.length > limit) {
+            devLogger.w(
+                "INFERENCE",
+                "System prompt truncated: ${systemPrompt.length} → $limit chars (safety net)"
+            )
+            systemPrompt.take(limit)
+        } else systemPrompt
+    }
+
     fun sendMessage(
         userText: String,
         systemPrompt: String,
@@ -192,6 +210,7 @@ class GemmaInference @Inject constructor(
             return emptyFlow()
         }
         engineManager.resetIdleTimer()
+        val safePrompt = guardPromptLength(systemPrompt)
 
         return flow {
             // Try the tool-enabled path first.
@@ -209,7 +228,7 @@ class GemmaInference @Inject constructor(
             // the stream as text are scrubbed via [sanitizeChunk] so the user
             // never sees `<|tool_call|>` garbage in the chat bubble.
             try {
-                val conversation = ensureConversation(tier, engine, systemPrompt, tools, useTools = true)
+                val conversation = ensureConversation(tier, engine, safePrompt, tools, useTools = true)
                 devLogger.i("INFERENCE", "[$tier] → sendMessageAsync (tools): \"${userText.take(60)}\"")
                 conversation.sendMessageAsync(userText).collect { raw ->
                     val cleaned = sanitizeChunk(raw.toString())
@@ -232,7 +251,7 @@ class GemmaInference @Inject constructor(
             // Fallback: rebuild the session WITHOUT tools and retry once.
             devLogger.w("INFERENCE", "[$tier] Falling back to no-tools mode…")
             try {
-                val conversation = ensureConversation(tier, engine, systemPrompt, tools = null, useTools = false)
+                val conversation = ensureConversation(tier, engine, safePrompt, tools = null, useTools = false)
                 conversation.sendMessageAsync(userText).collect { raw ->
                     val cleaned = sanitizeChunk(raw.toString())
                     if (cleaned.isNotEmpty()) emit(cleaned)
