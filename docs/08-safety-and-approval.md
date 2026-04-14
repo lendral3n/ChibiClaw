@@ -1,8 +1,8 @@
 # 08 — Safety & Approval System
 
-## Terinspirasi OpenClaw
+## Approval System
 
-OpenClaw memiliki approval system built-in dengan policy "auto", "ask", dan allowlist per-tool. ChibiClaw mengadopsi pola ini dan menambahkan Android-specific safety checks.
+ChibiClaw memiliki approval system built-in dengan policy "auto", "ask", dan allowlist per-app, dilengkapi Android-specific safety checks.
 
 ## Severity Levels
 

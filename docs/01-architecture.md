@@ -21,13 +21,13 @@ User Input → Command Gateway → Approval Gate → Gemma Core → Execution En
 ## Modul-modul
 
 ### 1. Command Gateway
-Pintu masuk tunggal. Terinspirasi OpenClaw Gateway yang menangani 30+ channel lewat satu control plane.
+Pintu masuk tunggal. Menangani 30+ channel lewat satu control plane.
 
 Sumber input:
 - **AIDL Bridge** — Dari character app via IPC
 - **Voice Engine** — Gemma E2B/E4B native audio (on-device STT)
 - **Notification Listener** — Auto-trigger dari notifikasi masuk
-- **Cron Scheduler** — Tugas terjadwal (dari OpenClaw)
+- **Cron Scheduler** — Tugas terjadwal
 - **Widget/Overlay** — Quick command dari floating widget
 
 Semua input dinormalisasi menjadi `CommandRequest` yang seragam:
@@ -43,7 +43,7 @@ data class CommandRequest(
 ```
 
 ### 2. Approval Gate
-Terinspirasi OpenClaw approval system. Tiga mode policy:
+Tiga mode policy:
 - **auto** — Langsung eksekusi (LOW severity)
 - **ask** — Tampilkan konfirmasi (HIGH severity)
 - **deny** — Selalu tolak (BLOCKED)
@@ -79,7 +79,7 @@ Dual-path:
 Diagram: `diagrams/perception-dual-path.txt`
 
 ### 6. Skill System
-Kemampuan agent berupa file JSON, bukan hardcoded. Terinspirasi OpenClaw skills.
+Kemampuan agent berupa file JSON, bukan hardcoded.
 
 Detail: `04-skill-system.md` | Diagram: `diagrams/skill-system.txt`
 
