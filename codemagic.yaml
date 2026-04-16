@@ -1,7 +1,7 @@
 workflows:
   android-release:
     name: ChibiClaw — Release Build
-    max_build_duration: 60  # timeout 60 menit
+    max_build_duration: 60
 
     # ── Trigger: setiap push ke main ─────────────────────────────────
     triggering:
@@ -15,17 +15,13 @@ workflows:
     # ── Environment ──────────────────────────────────────────────────
     environment:
       java: 17
-      # "signing_credentials" adalah nama group environment variable
-      # yang kamu buat di Codemagic dashboard.
-      # Cara setup: lihat komentar di bagian bawah file ini.
       groups:
-        - signing_credentials
+        - signing_credentials  # set di Codemagic: App Settings → Environment variables
 
     # ── Build steps ──────────────────────────────────────────────────
     scripts:
       - name: Build Release APK
         script: |
-          # Setup signing jika credentials tersedia
           if [ -n "$CM_KEYSTORE" ]; then
             echo "$CM_KEYSTORE" | base64 --decode > "$CM_BUILD_DIR/chibiclaw.jks"
             export KEYSTORE_PATH="$CM_BUILD_DIR/chibiclaw.jks"
@@ -36,7 +32,6 @@ workflows:
           else
             echo "Signing credentials tidak ditemukan — build unsigned APK"
           fi
-
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace
 
@@ -49,41 +44,72 @@ workflows:
           mv "$APK_FILE" "$NEW_NAME"
           echo "APK: $NEW_NAME"
 
-    # ── Artifacts — file yang bisa didownload setelah build ──────────
+      - name: Create GitHub Release
+        script: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | grep -oP '"\K[^"]+')
+          APK_FILE=$(ls app/build/outputs/apk/release/ChibiClaw-*.apk | head -1)
+          APK_NAME=$(basename "$APK_FILE")
+          TAG="v${VERSION}-build${BUILD_NUMBER}"
+
+          # Buat release via GitHub API
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"tag_name\": \"$TAG\",
+              \"name\": \"ChibiClaw v${VERSION} — Build #${BUILD_NUMBER}\",
+              \"body\": \"Build otomatis dari Codemagic\\n\\nCommit: \`${CM_COMMIT}\`\\n\\n### Cara Install\\n1. Download APK di bawah\\n2. Aktifkan install dari sumber tidak dikenal\\n3. Buka APK dan install\",
+              \"draft\": false,
+              \"prerelease\": false
+            }" \
+            "https://api.github.com/repos/$CM_REPO_SLUG/releases")
+
+          UPLOAD_URL=$(echo "$RESPONSE" | grep -o '"upload_url": "[^"]*"' | grep -o 'https://[^{]*')
+
+          if [ -z "$UPLOAD_URL" ]; then
+            echo "Gagal buat GitHub Release. Response: $RESPONSE"
+            exit 1
+          fi
+
+          # Upload APK ke release
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @"$APK_FILE" \
+            "${UPLOAD_URL}?name=${APK_NAME}"
+
+          echo "GitHub Release berhasil: $TAG"
+
+    # ── Artifacts — tetap tersimpan di Codemagic juga ────────────────
     artifacts:
       - app/build/outputs/apk/release/ChibiClaw-*.apk
 
-    # ── Publishing ───────────────────────────────────────────────────
+    # ── Notifikasi email ─────────────────────────────────────────────
     publishing:
-      # Otomatis buat GitHub Release dan attach semua artifact di atas
-      # (Bekerja karena repo sudah connect ke Codemagic via GitHub OAuth)
-      github_releases:
-        prerelease: false
-
-      # Notifikasi email setelah build selesai
       email:
         recipients:
-          - $CM_NOTIFY_EMAIL  # set di environment variable group
+          - $CM_NOTIFY_EMAIL
         notify:
           success: true
           failure: true
 
 # ═══════════════════════════════════════════════════════════════════════
-# SETUP CODEMAGIC DASHBOARD (lakukan sekali saja)
+# SETUP CODEMAGIC DASHBOARD
 # ═══════════════════════════════════════════════════════════════════════
 #
-# 1. Buka: codemagic.io → pilih app ChibiClaw
-# 2. Pergi ke: App Settings → Environment variables
-# 3. Buat group baru bernama: signing_credentials
-# 4. Tambahkan variable berikut ke dalam group tersebut:
+# App Settings → Environment variables → group: signing_credentials
 #
-#    Variable            | Isi                                   | Secure?
-#    --------------------|---------------------------------------|--------
-#    CM_KEYSTORE         | output dari: base64 chibiclaw.jks     | YES ✓
-#    CM_KEYSTORE_PASSWORD| password keystore kamu                | YES ✓
-#    CM_KEY_ALIAS        | chibiclaw                             | YES ✓
-#    CM_KEY_PASSWORD     | password key (sama dgn store password)| YES ✓
-#    CM_NOTIFY_EMAIL     | email kamu untuk notifikasi           | no
+#   Variable            | Isi                               | Secure?
+#   --------------------|-----------------------------------|--------
+#   CM_KEYSTORE         | output: base64 chibiclaw.jks      | YES ✓
+#   CM_KEYSTORE_PASSWORD| password keystore                 | YES ✓
+#   CM_KEY_ALIAS        | chibiclaw                         | YES ✓
+#   CM_KEY_PASSWORD     | password key                      | YES ✓
+#   GITHUB_TOKEN        | GitHub Personal Access Token      | YES ✓
+#   CM_NOTIFY_EMAIL     | email notifikasi                  | no
 #
-# Centang "Secure" untuk semua yang ada password/keystore.
+# Cara buat GITHUB_TOKEN:
+#   github.com → Settings → Developer settings →
+#   Personal access tokens → Tokens (classic) → Generate new token
+#   Centang scope: repo (full)
 # ═══════════════════════════════════════════════════════════════════════
