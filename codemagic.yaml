@@ -84,14 +84,10 @@ workflows:
     artifacts:
       - app/build/outputs/apk/release/ChibiClaw-*.apk
 
-    # ── Notifikasi email ─────────────────────────────────────────────
-    publishing:
-      email:
-        recipients:
-          - $CM_NOTIFY_EMAIL
-        notify:
-          success: true
-          failure: true
+    # ── Notifikasi ───────────────────────────────────────────────────
+    # Email dihapus — notifikasi lewat GitHub Release otomatis.
+    # Aktifkan di GitHub: Settings → Notifications → "Releases"
+    publishing: {}
 
 # ═══════════════════════════════════════════════════════════════════════
 # SETUP CODEMAGIC DASHBOARD
