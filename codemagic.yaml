@@ -55,12 +55,10 @@ workflows:
 
     # ── Publishing ───────────────────────────────────────────────────
     publishing:
-      # Otomatis buat GitHub Release dan attach APK
+      # Otomatis buat GitHub Release dan attach semua artifact di atas
       # (Bekerja karena repo sudah connect ke Codemagic via GitHub OAuth)
       github_releases:
         prerelease: false
-        artifact_patterns:
-          - ChibiClaw-*.apk
 
       # Notifikasi email setelah build selesai
       email:
