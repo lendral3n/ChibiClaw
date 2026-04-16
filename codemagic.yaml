@@ -84,14 +84,7 @@ workflows:
     artifacts:
       - app/build/outputs/apk/release/ChibiClaw-*.apk
 
-    # ── Notifikasi email ─────────────────────────────────────────────
-    publishing:
-      email:
-        recipients:
-          - $CM_NOTIFY_EMAIL
-        notify:
-          success: true
-          failure: true
+    publishing: {}
 
 # ═══════════════════════════════════════════════════════════════════════
 # SETUP CODEMAGIC DASHBOARD
