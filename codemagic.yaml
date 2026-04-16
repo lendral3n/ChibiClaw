@@ -84,9 +84,6 @@ workflows:
     artifacts:
       - app/build/outputs/apk/release/ChibiClaw-*.apk
 
-    # ── Notifikasi ───────────────────────────────────────────────────
-    # Email dihapus — notifikasi lewat GitHub Release otomatis.
-    # Aktifkan di GitHub: Settings → Notifications → "Releases"
     publishing: {}
 
 # ═══════════════════════════════════════════════════════════════════════
