@@ -93,12 +93,12 @@ class ChibiService : Service() {
         val notification = buildFgsNotification()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            // Android 14+ wajib spec foregroundServiceType di runtime
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-            )
+            // Android 14+ wajib spec foregroundServiceType di runtime.
+            // Bitmask combo: microphone (Phase 2 voice) + specialUse (agent backend).
+            // Phase 5 akan tambah MEDIA_PROJECTION saat vision tools live.
+            val typeMask = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            startForeground(NOTIFICATION_ID, notification, typeMask)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }

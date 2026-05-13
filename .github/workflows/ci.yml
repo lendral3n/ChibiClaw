@@ -1,0 +1,69 @@
+name: CI — Compile Verify
+
+# Trigger:
+#  - Setiap push ke main → verify compile (debug build, no APK upload).
+#  - Setiap PR → verify compile sebelum merge.
+#
+# Phase 0-9 dev period: cuma verify compile, no release.
+# Phase 9 polish: tambah test step (kalau ada test suite).
+# Release proper via tag push → handled di build-release.yml.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug:
+    name: Build Debug APK (verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle (with cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/build-cache
+            ~/.gradle/caches/modules-2
+            ~/.gradle/caches/transforms-3
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Report APK size + SHA256
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          ls -lh "$APK"
+          shasum -a 256 "$APK"
+
+      # Catatan: tidak upload APK artifact di CI debug. APK debug 228MB,
+      # quota GitHub Actions artifact storage cepat habis kalau di-upload
+      # setiap commit. Kalau perlu debug APK, jalankan workflow_dispatch
+      # `release` manual atau push tag.

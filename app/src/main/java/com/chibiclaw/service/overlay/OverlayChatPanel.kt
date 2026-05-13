@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,21 +40,24 @@ import com.chibiclaw.data.database.TaskChannel
 import com.chibiclaw.data.database.TaskEntity
 import com.chibiclaw.data.database.TaskStatus
 import com.chibiclaw.data.repository.TaskRepository
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.chibiclaw.voice.VoicePipelineOrchestrator
+import com.chibiclaw.voice.tts.ElevenLabsTts
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Embedded chat panel di overlay window — versi compact dari ChatScreen
- * MainActivity. Dipanggil saat user tap bubble → expand.
+ * Embedded chat panel di overlay window — text input + mic button + chat
+ * history list. Dipanggil saat user tap bubble.
  *
- * Ukuran fixed (~360x520dp). Phase 1 dengan input box + chat history list +
- * close button. Phase 2 akan tambah mic button + voice input.
+ * Phase 2: mic button trigger VoicePipelineOrchestrator (record → STT →
+ * agent loop → TTS playback).
  */
 @Composable
 fun OverlayChatPanel(
     conversationManager: ConversationManager,
     taskRepository: TaskRepository,
+    voicePipeline: VoicePipelineOrchestrator? = null,
+    elevenLabsTts: ElevenLabsTts? = null,
     onClose: () -> Unit,
 ) {
     val tasksFlow = remember {
@@ -63,11 +67,16 @@ fun OverlayChatPanel(
     }
     val tasks by tasksFlow.collectAsState(initial = emptyList())
     var input by remember { mutableStateOf("") }
+    var recording by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(tasks.size) {
         if (tasks.isNotEmpty()) listState.animateScrollToItem(tasks.size - 1)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { voicePipeline?.stop() }
     }
 
     Card(
@@ -93,6 +102,16 @@ fun OverlayChatPanel(
                     Text("×", style = MaterialTheme.typography.headlineMedium)
                 }
             }
+
+            if (elevenLabsTts != null && !elevenLabsTts.hasApiKey()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "ElevenLabs API key belum di-set. Setting → Voice (Phase 9 polish).",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
             Spacer(Modifier.height(8.dp))
 
             // Chat history
@@ -104,7 +123,7 @@ fun OverlayChatPanel(
                 if (tasks.isEmpty()) {
                     item {
                         Text(
-                            text = "Tap input di bawah buat mulai.",
+                            text = "Tap input atau mic buat mulai.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -117,11 +136,28 @@ fun OverlayChatPanel(
 
             Spacer(Modifier.height(8.dp))
 
-            // Input
+            // Input row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (voicePipeline != null) {
+                    Button(
+                        onClick = {
+                            if (recording) {
+                                voicePipeline.stop()
+                                recording = false
+                            } else {
+                                voicePipeline.start(scope) { /* transcribed handled inside */ }
+                                recording = true
+                            }
+                        },
+                    ) {
+                        Text(if (recording) "■" else "🎤")
+                    }
+                    Spacer(Modifier.size(4.dp))
+                }
+
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },

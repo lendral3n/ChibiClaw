@@ -134,6 +134,9 @@ dependencies {
     // Logging
     implementation(libs.timber)
 
+    // Phase 2: OkHttp untuk ElevenLabs TTS streaming
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
     implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
     implementation(libs.onnxruntime.android)

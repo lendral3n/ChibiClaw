@@ -9,9 +9,13 @@ import com.chibiclaw.ai.llm.ResponseParser
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.data.database.NextIntent
+import com.chibiclaw.data.database.TaskChannel
 import com.chibiclaw.data.database.TaskEntity
 import com.chibiclaw.data.database.TaskStatus
 import com.chibiclaw.data.repository.TaskRepository
+import com.chibiclaw.voice.ResponseComposer
+import com.chibiclaw.voice.tts.ElevenLabsTts
+import com.chibiclaw.voice.tts.TtsResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,6 +45,8 @@ class AgentRuntime @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val toolDispatcher: ToolDispatcher,
     private val auditLogger: AuditLogger,
+    private val responseComposer: ResponseComposer,
+    private val elevenLabsTts: ElevenLabsTts,
 ) {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -141,6 +147,21 @@ class AgentRuntime @Inject constructor(
         if (final != null && !final.status.isTerminal && final.status != TaskStatus.AWAITING_USER) {
             taskRepository.markFailed(taskId, "Max iteration ($iteration) reached")
             Timber.w("Task $taskId reached max iteration")
+        }
+
+        // Voice response — speak hasil ke user (channel CHAT only).
+        val refreshed = taskRepository.get(taskId)
+        if (refreshed != null && refreshed.channel == TaskChannel.CHAT) {
+            speakResponse(refreshed)
+        }
+    }
+
+    private suspend fun speakResponse(task: TaskEntity) {
+        val composed = responseComposer.compose(task)
+        if (composed.isSilent || !elevenLabsTts.hasApiKey()) return
+        when (val result = elevenLabsTts.speak(composed.text, composed.emotionTag)) {
+            is TtsResult.Success -> Timber.d("TTS played ${result.bytesStreamed / 1024}KB")
+            is TtsResult.Error -> Timber.w("TTS error: ${result.message}")
         }
     }
 

@@ -87,15 +87,15 @@
             </intent-filter>
         </activity>
 
-        <!-- ChibiService — Foreground Service utama (overlay + agent runtime) -->
+        <!-- ChibiService — Foreground Service utama (overlay + agent runtime + voice) -->
         <service
             android:name=".service.ChibiService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="microphone|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="ChibiClaw AI agent — runs in background, overlay bubble + voice command + persistent task execution. Phase 1+ tambah microphone + mediaProjection." />
+                android:value="ChibiClaw AI agent — runs in background, overlay bubble + voice command + persistent task execution. Phase 5 akan tambah mediaProjection." />
         </service>
 
         <!-- Boot Receiver — auto-restart ChibiService setelah reboot -->

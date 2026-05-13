@@ -21,37 +21,40 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-13 session "Phase 1 Implementation (Agent Core)"
+**Update terakhir:** 2026-05-13 session "Phase 2 Voice + Emotion + CI/CD refactor"
 
-**Phase aktif:** Phase 1 selesai compile. Phase 2 ready untuk start.
+**Phase aktif:** Phase 2 selesai compile (80%). Phase 3 ready untuk start.
 
-**Phase 0 Status:** ✅ DONE
-- Committed: `1cb7a75 phase-0: foundation rewrite — agent-native architecture`
-- Push: PENDING (credential di sistem ini punya akses `gorenglele`, butuh push manual dari Lendra)
+**Phase Status Summary:**
+- **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
+- **Phase 1** (Agent Core): ✅ Compile DONE (85%). Commit `8f6547c` + `fb9355a`.
+- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Belum committed (akan commit setelah docs update).
 
-**Phase 1 Status:** ✅ Compile DONE (sub-milestone pending)
-- 33 file Kotlin baru (LLM adapter + entities + repos + AgentRuntime + 6 tools + UI)
-- Total 57 file Kotlin di `app/src/main/java/com/chibiclaw/`
-- APK debug: 228 MB, SHA-256 `3bfb8e2cfa51ea8124fe2601c577808f49cff0add53d6030caf3a59608ce8e2b`
-- Build sukses 30 detik
-- Belum committed (akan commit setelah update docs ini)
-- ❌ Belum install ke HP (ADR-011)
+**Total Kotlin files:** ~70 di `app/src/main/java/com/chibiclaw/`
+**Build:** sukses 38 detik (warm), APK 228 MB debug
 
-**Phase 1 Sub-milestone TODO** (compile OK tapi belum 100% live):
-- `GemmaAdapter.runActualInference()` masih `NotImplementedError`. InferenceRouter fallback ke StubAdapter (dev). Setelah `.task` model file di-push ke device + LiteRT-LM API binding lengkap → live Gemma inference.
-- `EmbeddingProvider` pakai hash-based pseudo-embedding (bukan semantic). Setelah `e5_small_q8.onnx` + tokenizer binding siap, replace dengan ONNX Runtime call.
+**Sub-milestone Pending** (reflection-based, auto-bind saat model + dep enabled):
+- Phase 1: GemmaAdapter `runActualInference` (LiteRT-LM real); EmbeddingProvider `encodeOnnx` (ONNX + tokenizer)
+- Phase 2: WhisperStt `transcribeOnnx`; Wav2SmallEmotion `runOnnx`; TextEmotionClassifier `runOnnx`; AuditLog calls di voice pipeline
 
 **Working tree:**
-- Phase 1 files: 33 baru + 5 modified (Phase 0 sudah committed)
+- Phase 2 files: 13 baru + 7 modified
+- CI/CD: `ci.yml` baru (debug verify), `build-release.yml` refactor (tag-trigger), `codemagic.yaml` refactor (tag-trigger)
 - Stash: `v4-rewrite-archive-2026-05-13` + `v4-scaffolding-pre-phase0-2026-05-12`
-- Git: di branch `main`, HEAD = `1cb7a75` Phase 0
+- Git: HEAD = `fb9355a` (audit fix Phase 0+1). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 1 ke git lokal — done setelah docs update
-2. **Phase 1 sub-milestone**: bind LiteRT-LM + ONNX Runtime real (butuh model files di device)
-3. **Phase 2 (Voice + Emotion, 2.5 minggu)**: ready setelah sub-milestone Phase 1 verified atau bisa proceed dengan StubAdapter dev mode
+1. Commit Phase 2 + CI/CD changes ke git lokal (single commit)
+2. Lendra push manual lagi
+3. **Phase 3 (Tools Mid: a11y + Shizuku + messaging, 3 minggu)** ready start
+4. Sub-milestone Phase 1+2 paralel kapan saja (push model files + enable deps optional)
 
-Detail Phase 2: [23-phase-2-voice-emotion.md](23-phase-2-voice-emotion.md).
+**CI/CD Behavior Baru:**
+- Push ke main → `ci.yml` build debug verify (no APK upload)
+- Push tag `v*` (mis. `git tag v4.0.0 && git push --tags`) → `build-release.yml` build release + GitHub Release
+- `codemagic.yaml` mirror tag-only sebagai alternative CI
+
+Detail Phase 3: [24-phase-3-tools-mid.md](24-phase-3-tools-mid.md).
 
 ---
 

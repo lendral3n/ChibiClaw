@@ -18,6 +18,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.chibiclaw.agent.ConversationManager
 import com.chibiclaw.data.repository.TaskRepository
 import com.chibiclaw.ui.theme.ChibiClawTheme
+import com.chibiclaw.voice.VoicePipelineOrchestrator
+import com.chibiclaw.voice.tts.ElevenLabsTts
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
@@ -38,6 +40,8 @@ class OverlayWindowManager @Inject constructor(
     private val windowManager: WindowManager,
     private val conversationManager: ConversationManager,
     private val taskRepository: TaskRepository,
+    private val voicePipeline: VoicePipelineOrchestrator,
+    private val elevenLabsTts: ElevenLabsTts,
 ) {
 
     private var bubbleLifecycleOwner: OverlayLifecycleOwner? = null
@@ -168,6 +172,8 @@ class OverlayWindowManager @Inject constructor(
                     OverlayChatPanel(
                         conversationManager = conversationManager,
                         taskRepository = taskRepository,
+                        voicePipeline = voicePipeline,
+                        elevenLabsTts = elevenLabsTts,
                         onClose = { togglePanel() },
                     )
                 }

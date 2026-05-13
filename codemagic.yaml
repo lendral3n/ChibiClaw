@@ -1,24 +1,31 @@
 workflows:
+  # =====================================================================
+  # NOTE: Codemagic adalah alternative CI. Primary CI = GitHub Actions
+  # (.github/workflows/ci.yml + build-release.yml).
+  #
+  # Kalau kamu cuma pakai GitHub Actions, file ini bisa di-ignore (tetap
+  # safe di repo). Kalau mau aktifkan Codemagic, set environment variables
+  # di App Settings → Environment variables → group `signing_credentials`
+  # (lihat docs di bawah).
+  # =====================================================================
+
   android-release:
     name: ChibiClaw — Release Build
     max_build_duration: 60
 
-    # ── Trigger: setiap push ke main ─────────────────────────────────
+    # Trigger: tag push v*. Phase 0-9 dev: tidak auto per commit, manual tag.
     triggering:
       events:
-        - push
-      branch_patterns:
-        - pattern: main
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
           include: true
-          source: true
 
-    # ── Environment ──────────────────────────────────────────────────
     environment:
       java: 17
       groups:
-        - signing_credentials  # set di Codemagic: App Settings → Environment variables
+        - signing_credentials
 
-    # ── Build steps ──────────────────────────────────────────────────
     scripts:
       - name: Build Release APK
         script: |
@@ -46,32 +53,33 @@ workflows:
 
       - name: Create GitHub Release
         script: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "GITHUB_TOKEN belum di-set — skip create release (artifact tetap tersedia di Codemagic)"
+            exit 0
+          fi
           VERSION=$(grep 'versionName' app/build.gradle.kts | grep -oP '"\K[^"]+')
           APK_FILE=$(ls app/build/outputs/apk/release/ChibiClaw-*.apk | head -1)
           APK_NAME=$(basename "$APK_FILE")
-          TAG="v${VERSION}-build${BUILD_NUMBER}"
+          TAG="${CM_TAG:-v${VERSION}-build${BUILD_NUMBER}}"
 
-          # Buat release via GitHub API
           RESPONSE=$(curl -s -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
               \"tag_name\": \"$TAG\",
-              \"name\": \"ChibiClaw v${VERSION} — Build #${BUILD_NUMBER}\",
-              \"body\": \"Build otomatis dari Codemagic\\n\\nCommit: \`${CM_COMMIT}\`\\n\\n### Cara Install\\n1. Download APK di bawah\\n2. Aktifkan install dari sumber tidak dikenal\\n3. Buka APK dan install\",
+              \"name\": \"ChibiClaw $TAG\",
+              \"body\": \"Build via Codemagic. Commit: \`${CM_COMMIT}\`\",
               \"draft\": false,
-              \"prerelease\": false
+              \"prerelease\": true
             }" \
             "https://api.github.com/repos/$CM_REPO_SLUG/releases")
 
           UPLOAD_URL=$(echo "$RESPONSE" | grep -o '"upload_url": "[^"]*"' | grep -o 'https://[^{]*')
-
           if [ -z "$UPLOAD_URL" ]; then
             echo "Gagal buat GitHub Release. Response: $RESPONSE"
             exit 1
           fi
 
-          # Upload APK ke release
           curl -s -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Content-Type: application/vnd.android.package-archive" \
@@ -80,26 +88,24 @@ workflows:
 
           echo "GitHub Release berhasil: $TAG"
 
-    # ── Artifacts — tetap tersimpan di Codemagic juga ────────────────
     artifacts:
       - app/build/outputs/apk/release/ChibiClaw-*.apk
 
     publishing: {}
 
 # ═══════════════════════════════════════════════════════════════════════
-# SETUP CODEMAGIC DASHBOARD
+# SETUP CODEMAGIC DASHBOARD (kalau mau aktifkan)
 # ═══════════════════════════════════════════════════════════════════════
 #
 # App Settings → Environment variables → group: signing_credentials
 #
-#   Variable            | Isi                               | Secure?
-#   --------------------|-----------------------------------|--------
-#   CM_KEYSTORE         | output: base64 chibiclaw.jks      | YES ✓
-#   CM_KEYSTORE_PASSWORD| password keystore                 | YES ✓
-#   CM_KEY_ALIAS        | chibiclaw                         | YES ✓
-#   CM_KEY_PASSWORD     | password key                      | YES ✓
-#   GITHUB_TOKEN        | GitHub Personal Access Token      | YES ✓
-#   CM_NOTIFY_EMAIL     | email notifikasi                  | no
+#   Variable             | Isi                               | Secure?
+#   ---------------------|-----------------------------------|--------
+#   CM_KEYSTORE          | base64 chibiclaw.jks              | YES ✓
+#   CM_KEYSTORE_PASSWORD | password keystore                 | YES ✓
+#   CM_KEY_ALIAS         | chibiclaw                         | YES ✓
+#   CM_KEY_PASSWORD      | password key                      | YES ✓
+#   GITHUB_TOKEN         | GitHub Personal Access Token      | YES ✓
 #
 # Cara buat GITHUB_TOKEN:
 #   github.com → Settings → Developer settings →

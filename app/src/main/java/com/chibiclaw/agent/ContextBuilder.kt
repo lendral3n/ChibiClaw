@@ -5,6 +5,7 @@ import com.chibiclaw.ai.llm.AgentPrompt
 import com.chibiclaw.data.database.TaskEntity
 import com.chibiclaw.data.repository.TaskRepository
 import com.chibiclaw.memory.MemoryStore
+import com.chibiclaw.voice.emotion.EmotionDetector
 import com.chibiclaw.world.WorldObserver
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,6 +22,7 @@ class ContextBuilder @Inject constructor(
     private val worldObserver: WorldObserver,
     private val memoryStore: MemoryStore,
     private val toolRegistry: ToolRegistry,
+    private val emotionDetector: EmotionDetector,
 ) {
 
     private val personaTraits = """
@@ -70,7 +72,7 @@ class ContextBuilder @Inject constructor(
             recentTasks = recentTasksList,
             worldSnapshot = worldText,
             relevantMemory = memoryLines,
-            emotionSignal = null,     // Phase 2: emotion detector fill ini
+            emotionSignal = emotionDetector.current().takeIf { !it.isEmpty() }?.toPromptText(),
             toolCatalog = tools,
             personaTraits = personaTraits,
             iteration = task.iterationCount,
