@@ -1,37 +1,55 @@
 package com.chibiclaw.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val ChibiDarkColorScheme = darkColorScheme(
-    primary = Purple40,
-    onPrimary = OnBackgroundDark,
-    primaryContainer = Purple80.copy(alpha = 0.15f),
-    onPrimaryContainer = PurpleLight,
-    secondary = Teal40,
-    onSecondary = OnBackgroundDark,
-    secondaryContainer = Teal80.copy(alpha = 0.15f),
-    onSecondaryContainer = Teal80,
-    background = BackgroundDark,
-    onBackground = OnBackgroundDark,
-    surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariant,
+private val LightColorScheme = lightColorScheme(
+    primary = ChibiRose,
+    onPrimary = ChibiSurface,
+    primaryContainer = ChibiRoseLight,
+    onPrimaryContainer = ChibiRoseDark,
+    secondary = ChibiRose,
+    background = ChibiBackground,
+    onBackground = ChibiTextPrimary,
+    surface = ChibiSurface,
+    onSurface = ChibiTextPrimary,
+    surfaceVariant = ChibiSurfaceVariant,
+    onSurfaceVariant = ChibiTextSecondary,
+    outline = ChibiBorder,
+    outlineVariant = ChibiSurfaceVariant,
     error = StateError,
-    onError = OnBackgroundDark,
-    errorContainer = StateError.copy(alpha = 0.15f),
-    onErrorContainer = StateError,
-    outline = OnSurfaceVariant.copy(alpha = 0.5f),
-    outlineVariant = SurfaceVariantDark,
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = ChibiRose,
+    onPrimary = ChibiSurfaceDark,
+    primaryContainer = ChibiRoseDark,
+    onPrimaryContainer = ChibiRoseLight,
+    secondary = ChibiRose,
+    background = ChibiBackgroundDark,
+    onBackground = ChibiTextPrimaryDark,
+    surface = ChibiSurfaceDark,
+    onSurface = ChibiTextPrimaryDark,
+    surfaceVariant = ChibiSurfaceVariantDark,
+    onSurfaceVariant = ChibiTextSecondaryDark,
+    outline = ChibiBorderDark,
+    outlineVariant = ChibiSurfaceVariantDark,
+    error = StateError,
 )
 
 @Composable
-fun ChibiClawTheme(content: @Composable () -> Unit) {
+fun ChibiClawTheme(
+    useDarkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
+    val colorScheme = if (useDarkTheme) DarkColorScheme else LightColorScheme
+
     MaterialTheme(
-        colorScheme = ChibiDarkColorScheme,
+        colorScheme = colorScheme,
         typography = ChibiTypography,
-        content = content
+        content = content,
     )
 }

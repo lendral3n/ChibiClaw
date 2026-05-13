@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.ksp)          // Room + Hilt pakai KSP
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt.android)
@@ -15,16 +15,13 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = 1
-        versionName = "3.0.0"
+        versionName = "4.0.0-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         create("release") {
-            // Signing via environment variables — diisi otomatis oleh GitHub Actions.
-            // Untuk build lokal: set env vars secara manual, atau biarkan kosong
-            // (APK akan unsigned, tetap bisa di-sideload).
             val keystorePath = System.getenv("KEYSTORE_PATH")
             if (!keystorePath.isNullOrBlank()) {
                 storeFile = file(keystorePath)
@@ -47,8 +44,8 @@ android {
     }
 
     buildFeatures {
-        aidl = true
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -82,8 +79,6 @@ android {
 
     testOptions {
         unitTests {
-            // Stub Android framework calls (e.g. android.util.Log) so JVM
-            // unit tests don't crash with "not mocked" RuntimeException.
             isReturnDefaultValues = true
         }
     }
@@ -110,14 +105,15 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.work.hilt)
+    ksp(libs.work.hilt.compiler)
 
-    // LiteRT-LM (Gemma on-device) — tersedia di Google Maven
-    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
-
-    // Room DB
+    // Room + SQLCipher
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+    implementation(libs.sqlcipher)
+    implementation(libs.androidx.sqlite)
 
     // DataStore
     implementation(libs.datastore.preferences)
@@ -125,34 +121,39 @@ dependencies {
     // WorkManager
     implementation(libs.work.runtime.ktx)
 
-    // Security
+    // EncryptedSharedPreferences
     implementation(libs.security.crypto)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
 
-    // Serialization
+    // Serialization + datetime
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.datetime)
 
-    // Shizuku
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
+    // Logging
+    implementation(libs.timber)
 
-    // ML Kit — on-device vision / translation / barcode
-    implementation(libs.mlkit.text.recognition)
-    implementation(libs.mlkit.barcode.scanning)
-    implementation(libs.mlkit.translate)
+    // ===========================================================
+    // Berikut akan di-aktifkan di phase selanjutnya. Sengaja keep
+    // commented supaya APK Phase 0 ringan & build cepat.
+    // ===========================================================
+    // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
+    // implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    // implementation(libs.onnxruntime.android)
 
-    // ONNX Runtime (vector memory all-MiniLM-L6-v2 embeddings)
-    implementation(libs.onnxruntime.android)
+    // Phase 3: Shizuku
+    // implementation(libs.shizuku.api)
+    // implementation(libs.shizuku.provider)
 
-    // cron-utils (scheduled triggers / Phase 7)
-    implementation(libs.cron.utils)
+    // Phase 5: ML Kit OCR + Play Services Location
+    // implementation(libs.mlkit.text.recognition)
+    // implementation(libs.play.services.location)
 
-    // Play Services Location (geofence triggers / Phase 7)
-    implementation(libs.play.services.location)
+    // Phase 6: cron-utils (standing instruction time trigger)
+    // implementation(libs.cron.utils)
 
-    // Testing
+    // Testing (Phase 9 manual; minimal stubs untuk Hilt compile)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

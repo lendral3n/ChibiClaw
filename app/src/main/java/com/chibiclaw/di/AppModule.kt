@@ -1,21 +1,29 @@
 package com.chibiclaw.di
 
+import android.content.Context
+import com.chibiclaw.data.database.AppDatabase
+import com.chibiclaw.data.database.AuditDao
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 /**
- * Top-level Hilt module for application-scoped bindings.
- *
- * Historically this module manually constructed [com.chibiclaw.memory.MemoryManager],
- * but that class — and all the other singleton services we once listed
- * here — now use @Inject constructors, so Hilt provisions them itself
- * from the DAO providers exposed by [DatabaseModule] and the
- * @ApplicationContext binding.
- *
- * The module stays around as the canonical @InstallIn SingletonComponent
- * anchor so future @Provides methods have an obvious home.
+ * App-wide DI bindings: database, DAOs, top-level singletons.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule
+object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideAppDatabase(
+        @ApplicationContext context: Context,
+        passphrase: ByteArray,
+    ): AppDatabase = AppDatabase.create(context, passphrase)
+
+    @Provides
+    fun provideAuditDao(db: AppDatabase): AuditDao = db.auditDao()
+}

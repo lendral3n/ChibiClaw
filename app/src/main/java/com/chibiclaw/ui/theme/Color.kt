@@ -2,41 +2,43 @@ package com.chibiclaw.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary — Indigo/Purple
-val Purple80 = Color(0xFFBB86FC)
-val Purple40 = Color(0xFF7C4DFF)
-val PurpleLight = Color(0xFFEADDFF)
+/**
+ * Color palette ChibiClaw Phase 0. Kawaii pastel.
+ *
+ * Phase 9 polish akan migrate ke OKLCH token system (CCColors di v4 design).
+ * Phase 0 baseline Material 3 palette dengan accent rose.
+ */
 
-// Secondary — Teal
-val Teal80 = Color(0xFF80DEEA)
-val Teal40 = Color(0xFF00BCD4)
+// Primary (rose accent)
+val ChibiRose = Color(0xFFD96B91)
+val ChibiRoseLight = Color(0xFFFAD4E0)
+val ChibiRoseDark = Color(0xFF8A2E50)
 
-// Background
-val BackgroundDark = Color(0xFF0A0A0F)
-val SurfaceDark = Color(0xFF141420)
-val SurfaceVariantDark = Color(0xFF1E1E2E)
-val CardDark = Color(0xFF1A1A28)
-
-// Fuu bubble (agent)
-val FuuBubble = Color(0xFF1E1E2E)
-val UserBubble = Color(0xFF4A2C8C)
-
-// State colors
-val StateIdle = Color(0xFF757575)
-val StatePlanning = Color(0xFF448AFF)
-val StateExecuting = Color(0xFF00C853)
-val StateError = Color(0xFFFF5252)
-val StateWaiting = Color(0xFFFFD740)
-val StatePaused = Color(0xFF9E9E9E)
-val StateCompleted = Color(0xFF69F0AE)
-
-// Severity
-val SeverityLow = Color(0xFF69F0AE)
-val SeverityMedium = Color(0xFFFFD740)
-val SeverityHigh = Color(0xFFFF6D00)
-val SeverityBlocked = Color(0xFFFF5252)
+// Surface
+val ChibiBackground = Color(0xFFFAF7FB)
+val ChibiSurface = Color(0xFFFFFFFF)
+val ChibiSurfaceVariant = Color(0xFFF1ECF5)
 
 // Text
-val OnBackgroundDark = Color(0xFFE8E8F0)
-val OnSurfaceDark = Color(0xFFD0D0E0)
-val OnSurfaceVariant = Color(0xFF9090A8)
+val ChibiTextPrimary = Color(0xFF2A2A35)
+val ChibiTextSecondary = Color(0xFF6E6E7A)
+val ChibiTextTertiary = Color(0xFF9A9AA8)
+
+// Border / divider
+val ChibiBorder = Color(0xFFE5E0EA)
+
+// State colors (basic, Phase 9 dynamic via OKLCH per ChibiState)
+val StateIdle = Color(0xFF8A93A6)
+val StatePlanning = Color(0xFF5B91CD)
+val StateExecuting = Color(0xFF6BC298)
+val StateWaiting = Color(0xFFE3B96B)
+val StateError = Color(0xFFD97B7B)
+val StateComplete = Color(0xFFB47BD9)
+
+// Dark mode
+val ChibiBackgroundDark = Color(0xFF1A1820)
+val ChibiSurfaceDark = Color(0xFF252330)
+val ChibiSurfaceVariantDark = Color(0xFF2E2B3A)
+val ChibiTextPrimaryDark = Color(0xFFF0EEF3)
+val ChibiTextSecondaryDark = Color(0xFFBABAC9)
+val ChibiBorderDark = Color(0xFF38353F)

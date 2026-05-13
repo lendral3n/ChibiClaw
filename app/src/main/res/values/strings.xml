@@ -1,6 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ChibiClaw</string>
-    <string name="accessibility_service_label">ChibiClaw Assistant</string>
-    <string name="accessibility_service_summary">Izinkan Fuu mengetuk, mengetik, dan membaca layar untuk menjalankan perintah kamu.</string>
-    <string name="accessibility_service_description">ChibiClaw butuh Accessibility Service untuk mengotomasi aksi UI di aplikasi lain (klik tombol, mengetik di field, scroll) saat kamu memberi perintah multi-langkah seperti \"buka TikTok cari eskrim\". Layanan ini hanya aktif saat kamu memberi perintah dan tidak mengirim data keluar dari device.</string>
+    <string name="app_name_with_persona">ChibiClaw · Fuu</string>
+
+    <!-- Foreground Service -->
+    <string name="fgs_notification_channel_id">chibiclaw_agent</string>
+    <string name="fgs_notification_channel_name">ChibiClaw Agent</string>
+    <string name="fgs_notification_channel_description">Notifikasi service ChibiClaw yang jalan di background</string>
+    <string name="fgs_notification_title">ChibiClaw aktif</string>
+    <string name="fgs_notification_text">Fuu siap membantu</string>
+
+    <!-- Setup Wizard -->
+    <string name="setup_welcome_title">Halo, kenalin —\naku Fuu.</string>
+    <string name="setup_welcome_body">Asisten on-device buat HP-mu. Ngerti suara, ngeksekusi task, dan kamu yang kontrol privasinya.</string>
+    <string name="setup_button_start">Mulai setup →</string>
+    <string name="setup_button_skip">Skip</string>
+    <string name="setup_button_grant">Beri akses</string>
+    <string name="setup_button_next">Lanjut →</string>
+    <string name="setup_button_back">Kembali</string>
+    <string name="setup_button_done">Selesai</string>
+
+    <!-- Privacy Notice (full text di PrivacyNoticeScreen.kt; ini cuma label) -->
+    <string name="privacy_notice_title">Privacy Notice</string>
+    <string name="privacy_notice_agree">Setuju, mulai</string>
+    <string name="privacy_notice_disagree">Tidak setuju</string>
+
+    <!-- Vendor Wizard -->
+    <string name="vendor_wizard_title">Setup HP kamu</string>
+    <string name="vendor_wizard_subtitle">Pengaturan khusus per vendor biar Fuu tetap hidup di background</string>
+
+    <!-- Common -->
+    <string name="common_ok">OK</string>
+    <string name="common_cancel">Batal</string>
+    <string name="common_error">Terjadi kesalahan</string>
 </resources>
