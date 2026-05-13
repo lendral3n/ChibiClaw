@@ -46,6 +46,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        aidl = true   // Phase 3: Shizuku UserService AIDL
     }
 
     compileOptions {
@@ -136,6 +137,10 @@ dependencies {
 
     // Phase 2: OkHttp untuk ElevenLabs TTS streaming
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Phase 3: Shizuku (ADB-level privileged exec)
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
     implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")

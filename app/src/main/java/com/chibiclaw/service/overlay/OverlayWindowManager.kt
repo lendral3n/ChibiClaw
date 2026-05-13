@@ -16,6 +16,8 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.chibiclaw.agent.ConversationManager
+import com.chibiclaw.agent.tools.ToolCall
+import com.chibiclaw.agent.tools.ToolSpec
 import com.chibiclaw.data.repository.TaskRepository
 import com.chibiclaw.ui.theme.ChibiClawTheme
 import com.chibiclaw.voice.VoicePipelineOrchestrator
@@ -53,6 +55,11 @@ class OverlayWindowManager @Inject constructor(
     private var panelParams: WindowManager.LayoutParams? = null
 
     private var expanded: Boolean = false
+
+    // ── Confirmation overlay (Phase 3, HIGH severity gate) ──────────────────
+    private var confirmLifecycleOwner: OverlayLifecycleOwner? = null
+    private var confirmView: ComposeView? = null
+    private var confirmParams: WindowManager.LayoutParams? = null
 
     fun canDrawOverlays(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -263,6 +270,92 @@ class OverlayWindowManager @Inject constructor(
     } else {
         @Suppress("DEPRECATION")
         WindowManager.LayoutParams.TYPE_PHONE
+    }
+
+    /**
+     * Tampilkan ConfirmationOverlay bottom-sheet untuk HIGH severity tool.
+     * Callback `onResult` dipanggil dengan `true` kalau user tap "Ya",
+     * `false` kalau "Tidak" atau timeout. Overlay otomatis dismiss setelah
+     * callback fired.
+     *
+     * Dipanggil dari SafetyGate. Thread-safe karena selalu di Main thread
+     * (panggilan dari coroutine yang await pada Main).
+     */
+    @SuppressLint("RtlHardcoded")
+    fun showConfirmation(
+        toolSpec: ToolSpec,
+        call: ToolCall,
+        timeoutMs: Long,
+        onResult: (approved: Boolean) -> Unit,
+    ) {
+        if (!canDrawOverlays()) {
+            Timber.w("Overlay permission revoked saat showConfirmation; auto-deny.")
+            onResult(false)
+            return
+        }
+        if (confirmView != null) {
+            Timber.w("Confirmation overlay sudah tampil; auto-deny request baru.")
+            onResult(false)
+            return
+        }
+
+        val owner = OverlayLifecycleOwner().apply { onCreate() }
+        confirmLifecycleOwner = owner
+
+        val params = WindowManager.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.LEFT
+            dimAmount = 0.5f
+        }
+        confirmParams = params
+
+        val view = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeViewModelStoreOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                ChibiClawTheme(useDarkTheme = false) {
+                    ConfirmationOverlay(
+                        toolSpec = toolSpec,
+                        call = call,
+                        timeoutMs = timeoutMs,
+                        onResult = { approved ->
+                            dismissConfirmation()
+                            onResult(approved)
+                        },
+                    )
+                }
+            }
+        }
+        confirmView = view
+
+        windowManager.addView(view, params)
+        owner.onStart()
+        owner.onResume()
+        Timber.i("Confirmation overlay shown for tool=${toolSpec.name}")
+    }
+
+    private fun dismissConfirmation() {
+        val view = confirmView ?: return
+        val owner = confirmLifecycleOwner
+
+        runCatching { windowManager.removeView(view) }
+            .onFailure { Timber.w(it, "confirm removeView failed") }
+
+        owner?.onPause()
+        owner?.onStop()
+        owner?.onDestroy()
+
+        confirmView = null
+        confirmLifecycleOwner = null
+        confirmParams = null
     }
 
     companion object {

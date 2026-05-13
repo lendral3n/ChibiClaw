@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Phase 3 accessibility service config. Phase 1-2 file ini dihapus karena
+  belum dipakai. Phase 3 register ulang untuk a11y_* tools.
+
+  Flag rationale:
+  - canRetrieveWindowContent: wajib untuk a11y_describe_screen + selector match
+  - canPerformGestures: untuk tap + swipe via dispatchGesture
+  - canRequestFilterKeyEvents: false (Phase 3 belum butuh)
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewClicked|typeViewFocused|typeViewTextChanged|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:canRequestTouchExplorationMode="false"
+    android:canRequestFilterKeyEvents="false"
+    android:canPerformGestures="true"
+    android:notificationTimeout="100"
+    android:description="@string/accessibility_service_description"
+    android:summary="@string/accessibility_service_summary" />

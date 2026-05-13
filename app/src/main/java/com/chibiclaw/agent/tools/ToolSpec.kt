@@ -77,7 +77,10 @@ sealed class ToolResult {
 
     @Serializable
     @kotlinx.serialization.SerialName("user_denied")
-    data class UserDenied(override val callId: String) : ToolResult()
+    data class UserDenied(
+        override val callId: String,
+        val reason: String = "User menolak konfirmasi HIGH severity.",
+    ) : ToolResult()
 }
 
 enum class ErrorClass {

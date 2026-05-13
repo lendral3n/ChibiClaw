@@ -1,12 +1,12 @@
 package com.chibiclaw.agent.tools
 
+import com.chibiclaw.agent.tools.safety.SafetyGate
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.data.database.AuditResultStatus
 import com.chibiclaw.data.database.TaskEntity
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.JsonObject
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,16 +14,18 @@ import javax.inject.Singleton
 /**
  * Dispatcher — execute ToolCall apa adanya. Tidak ada policy code di atas tools.
  *
- * Phase 1 responsibilities:
+ * Responsibilities:
  *  - Resolve tool dari registry
  *  - Timeout wrap (3x estimated latency)
- *  - Inline safety gate untuk HIGH severity (Phase 1: simple skip kalau task channel STANDING/AUTONOMOUS dengan pre-auth; Phase 3+ tambah ConfirmationOverlay)
- *  - Audit log per execute
+ *  - Inline safety gate untuk HIGH severity via SafetyGate (Phase 3+):
+ *    ConfirmationOverlay 30s auto-deny.
+ *  - Audit log per execute (termasuk USER_DENIED outcome).
  */
 @Singleton
 class ToolDispatcher @Inject constructor(
     private val registry: ToolRegistry,
     private val auditLogger: AuditLogger,
+    private val safetyGate: SafetyGate,
 ) {
 
     suspend fun execute(call: ToolCall, task: TaskEntity): ToolResult {
@@ -35,13 +37,29 @@ class ToolDispatcher @Inject constructor(
             recoveryHint = "Pakai tool dari catalog yang available",
         )
 
-        // Phase 1 inline safety — kalau HIGH severity dan task channel CHAT,
-        // butuh confirmation. Phase 1 simplification: log + skip kalau task
-        // tidak ada pre-auth flag. Phase 3 akan add ConfirmationOverlay UI.
+        // HIGH severity → consult SafetyGate (overlay confirmation, auto-deny 30s).
+        // Phase 6: pre-auth dari StandingInstruction bisa skip overlay.
         if (tool.spec.safety.severity == ToolSeverity.HIGH) {
-            // Phase 1: skip enforcement (tools HIGH severity belum di-implement di Phase 1).
-            // Phase 3+: real confirmation overlay.
-            Timber.d("HIGH severity tool: ${tool.spec.name} (Phase 1 — confirmation overlay TBD)")
+            val approved = safetyGate.requestApproval(
+                toolSpec = tool.spec,
+                call = call,
+                task = task,
+            )
+            if (!approved) {
+                Timber.w("SafetyGate denied tool=${tool.spec.name} task=${task.id}")
+                val denied = ToolResult.UserDenied(
+                    callId = call.callId,
+                    reason = "User menolak / timeout konfirmasi HIGH severity.",
+                )
+                auditLogger.log(
+                    actionType = AuditActionType.TOOL_EXECUTED,
+                    dataSummary = "Tool ${call.tool} DENIED via SafetyGate",
+                    taskId = task.id,
+                    toolName = call.tool,
+                    resultStatus = AuditResultStatus.USER_DENIED,
+                )
+                return denied
+            }
         }
 
         val timeoutMs = tool.spec.capability.latencyMsRange.last * 3L

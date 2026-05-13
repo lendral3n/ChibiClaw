@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.data.prefs.SecurePreferences
+import com.chibiclaw.permissions.ShizukuManager
 import com.chibiclaw.service.ChibiService
 import com.chibiclaw.ui.chat.ChatScreen
 import com.chibiclaw.ui.debug.TaskDetailScreen
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var securePreferences: SecurePreferences
     @Inject lateinit var auditLogger: AuditLogger
+    @Inject lateinit var shizukuManager: ShizukuManager
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -73,6 +75,7 @@ class MainActivity : ComponentActivity() {
                             HomeNavigation()
                         } else {
                             SetupNavigator(
+                                shizukuManager = shizukuManager,
                                 onRequestOverlayPermission = { requestOverlayPermission() },
                                 onSetupComplete = {
                                     securePreferences.setSetupComplete(true)

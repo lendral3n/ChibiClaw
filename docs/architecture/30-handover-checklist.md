@@ -21,40 +21,43 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-13 session "Phase 2 Voice + Emotion + CI/CD refactor"
+**Update terakhir:** 2026-05-13 session "Phase 3 Tools Mid (a11y + Shizuku + messaging + SafetyGate)"
 
-**Phase aktif:** Phase 2 selesai compile (80%). Phase 3 ready untuk start.
+**Phase aktif:** Phase 3 selesai compile (100% W1–W3 + SafetyGate). Phase 4 ready untuk start.
 
 **Phase Status Summary:**
 - **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
 - **Phase 1** (Agent Core): ✅ Compile DONE (85%). Commit `8f6547c` + `fb9355a`.
-- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Belum committed (akan commit setelah docs update).
+- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Belum committed (akan masuk Phase 3 commit).
+- **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Belum committed.
 
-**Total Kotlin files:** ~70 di `app/src/main/java/com/chibiclaw/`
-**Build:** sukses 38 detik (warm), APK 228 MB debug
+**Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
+**Build:** sukses 54 detik (warm post-Phase3), APK debug
 
 **Sub-milestone Pending** (reflection-based, auto-bind saat model + dep enabled):
 - Phase 1: GemmaAdapter `runActualInference` (LiteRT-LM real); EmbeddingProvider `encodeOnnx` (ONNX + tokenizer)
 - Phase 2: WhisperStt `transcribeOnnx`; Wav2SmallEmotion `runOnnx`; TextEmotionClassifier `runOnnx`; AuditLog calls di voice pipeline
+- Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
 
 **Working tree:**
 - Phase 2 files: 13 baru + 7 modified
-- CI/CD: `ci.yml` baru (debug verify), `build-release.yml` refactor (tag-trigger), `codemagic.yaml` refactor (tag-trigger)
+- Phase 3 files: 22 baru (4 a11y tools, 3 shizuku tools, 3 world tools, ShizukuManager, ChibiShizukuService, AIDL, ChibiAccessibilityService, A11yTreeWalker, ChibiNotificationListener, SafetyGate, ConfirmationOverlay, AccessibilitySetupScreen, ShizukuSetupScreen, progress-audit-phase-3.md) + 5 modified (ToolsModule, ToolDispatcher, OverlayWindowManager, SetupNavigator, MainActivity, ToolSpec.UserDenied reason field)
+- CI/CD: `ci.yml` baru (debug verify), `build-release.yml` refactor (tag-trigger), `codemagic.yaml` deleted
 - Stash: `v4-rewrite-archive-2026-05-13` + `v4-scaffolding-pre-phase0-2026-05-12`
 - Git: HEAD = `fb9355a` (audit fix Phase 0+1). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 2 + CI/CD changes ke git lokal (single commit)
+1. Commit Phase 2 + Phase 3 + CI/CD changes ke git lokal
 2. Lendra push manual lagi
-3. **Phase 3 (Tools Mid: a11y + Shizuku + messaging, 3 minggu)** ready start
+3. **Phase 4 (Cloud Escalation: Gemini/Claude/GPT WebView)** ready start
 4. Sub-milestone Phase 1+2 paralel kapan saja (push model files + enable deps optional)
 
 **CI/CD Behavior Baru:**
 - Push ke main → `ci.yml` build debug verify (no APK upload)
 - Push tag `v*` (mis. `git tag v4.0.0 && git push --tags`) → `build-release.yml` build release + GitHub Release
-- `codemagic.yaml` mirror tag-only sebagai alternative CI
 
-Detail Phase 3: [24-phase-3-tools-mid.md](24-phase-3-tools-mid.md).
+Detail Phase 3 audit: [progress-audit-phase-3.md](progress-audit-phase-3.md).
+Detail Phase 4: [25-phase-4-cloud-escalation.md](25-phase-4-cloud-escalation.md).
 
 ---
 

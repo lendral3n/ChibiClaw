@@ -6,6 +6,86 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-13 — Phase 3 Tools Mid (a11y + Shizuku + messaging + SafetyGate)
+
+**Durasi:** ~2.5 jam (lanjutan setelah Phase 2 + CI/CD refactor)
+**Outcome:** Phase 3 selesai compile 100% W1–W3 + SafetyGate. APK debug build success 54s. 10 tools baru registered, SafetyGate HIGH severity wired, setup wizard 5-step.
+
+### Topik Kunci
+- Implementasi Phase 3 per work-package: W1 (a11y), W2 (Shizuku), W3 (messaging+intent+notifications)
+- SafetyGate inline confirmation untuk HIGH severity dengan auto-deny 30s
+- ConfirmationOverlay bottom-sheet Compose pakai OverlayWindowManager.showConfirmation
+- Wiring ToolDispatcher → SafetyGate.requestApproval → ToolResult.UserDenied path
+- ToolsModule.kt register 10 tools baru via @IntoMap @StringKey
+- Setup wizard tambah AccessibilitySetupScreen + ShizukuSetupScreen (5-step total)
+
+### Module yang Ditulis Phase 3
+**W1 — Accessibility (8 file):**
+- `accessibility/ChibiAccessibilityService.kt`
+- `accessibility/a11y/A11yTreeWalker.kt`
+- 4 a11y tools: `A11yClickTool`, `A11yTypeTool`, `A11yDescribeScreenTool`, `A11yScrollTool`
+- Manifest service decl + `res/xml/accessibility_service_config.xml`
+
+**W2 — Shizuku privileged (6 file):**
+- `permissions/ShizukuManager.kt` (singleton, mutex-protected, lazy bind)
+- `permissions/ChibiShizukuService.kt` (UserService Stub)
+- `aidl/com/chibiclaw/api/IChibiShizukuService.aidl`
+- 3 shizuku tools: `ShizukuExecTool`, `ShizukuForceStopTool`, `ShizukuGrantPermissionTool`
+
+**W3 — World / Messaging (4 file):**
+- `accessibility/ChibiNotificationListener.kt`
+- `MessagingTool` (SMS/WA/Telegram, HIGH severity)
+- `IntentSendTool` (generic ACTION_*, MEDIUM)
+- `WorldGetNotificationsTool` (LOW, snapshot)
+
+**SafetyGate (5 file):**
+- `agent/tools/safety/SafetyGate.kt`
+- `service/overlay/ConfirmationOverlay.kt`
+- `service/overlay/OverlayWindowManager.kt` (added `showConfirmation()`)
+- `agent/tools/ToolDispatcher.kt` (wired SafetyGate inject + denial path)
+- `agent/tools/ToolSpec.kt` (`UserDenied` field `reason`)
+
+**Setup wizard (3 file):**
+- `ui/setup/AccessibilitySetupScreen.kt`
+- `ui/setup/ShizukuSetupScreen.kt`
+- `ui/setup/SetupNavigator.kt` (5-step) + MainActivity inject ShizukuManager
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 54s
+43 actionable tasks: 11 executed, 32 up-to-date
+```
+
+### Issue Encountered & Fixed
+- `ChibiShizukuService` punya secondary `constructor()` yang conflict dengan implicit primary dari `class … : IChibiShizukuService.Stub()` → remove secondary constructor (Shizuku binder cukup no-arg implicit).
+- `withContext(Dispatchers.Main)` wajib di SafetyGate karena `WindowManager.addView` thread-affine ke Main.
+
+### Keputusan di Session Ini
+- Skip unit test per tool (sesuai keputusan user, manual test di Phase 9)
+- Phase 6 (StandingInstruction) handle pre-auth path untuk skip overlay
+- a11y_describe_screen vision-fallback defer Phase 5 (kalau tree kosong/oversize)
+- NotificationListener buffer persistence defer Phase 7
+
+### Aksi Dilakukan
+- 22 file Kotlin baru + 5 file modified
+- `progress-audit-phase-3.md` ditulis lengkap dengan per-WP completion %, risk catat
+- Handover checklist update ke status Phase 3 complete
+
+### Open Items / Next
+- Commit Phase 2 + Phase 3 single bundle (atau split 2 commit)
+- Lendra push manual
+- Phase 4 (Cloud Escalation Gemini/Claude/GPT WebView) ready start
+- Sub-milestone reflection adapters (Phase 1/2) tetap pending — bisa parallel kapan saja
+
+### State Akhir Session
+- Build hijau, semua tools registered via DI
+- SafetyGate aktif end-to-end (dispatcher → overlay → user → result)
+- Setup wizard guide user enable A11y + Shizuku (skip OK)
+- Tidak ada blocker untuk Phase 4
+
+---
+
 ## Session 2026-05-13 — Audit Phase 0+1 + Priority Fix
 
 **Durasi:** ~45 menit
