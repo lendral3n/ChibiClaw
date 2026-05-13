@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.chibiclaw.R
+import com.chibiclaw.agent.AgentRuntime
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.service.overlay.OverlayWindowManager
@@ -45,6 +46,7 @@ class ChibiService : Service() {
 
     @Inject lateinit var overlayWindowManager: OverlayWindowManager
     @Inject lateinit var auditLogger: AuditLogger
+    @Inject lateinit var agentRuntime: AgentRuntime
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val binder = LocalBinder()
@@ -64,9 +66,10 @@ class ChibiService : Service() {
 
         startForegroundWithType()
         overlayWindowManager.showBubble()
+        agentRuntime.start()
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STARTED,
-            dataSummary = "ChibiService foreground started",
+            dataSummary = "ChibiService foreground started, AgentRuntime active",
         )
 
         return START_STICKY
@@ -76,11 +79,12 @@ class ChibiService : Service() {
 
     override fun onDestroy() {
         Timber.i("ChibiService.onDestroy()")
+        agentRuntime.stop()
         overlayWindowManager.hideBubble()
         scope.cancel()
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STOPPED,
-            dataSummary = "ChibiService destroyed",
+            dataSummary = "ChibiService destroyed, AgentRuntime stopped",
         )
         super.onDestroy()
     }

@@ -6,6 +6,127 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-13 — Phase 1 Implementation (Agent Core)
+
+**Durasi:** ~2 jam
+**Outcome:** Phase 1 (Agent Core) selesai compile. 33 file Kotlin baru (total 57 dengan Phase 0). APK 228 MB (naik dari 99 MB Phase 0 karena include LiteRT-LM `.so` + ONNX Runtime native libs). Build sukses 30 detik.
+
+### Topik Kunci
+
+1. **Eksekusi Phase 1** per [22-phase-1-agent-core.md](22-phase-1-agent-core.md)
+2. **Push Phase 0 commit** — local commit `1cb7a75` sukses, push gagal (credential di sistem ini punya akses `gorenglele` bukan `lendral3n`). Lendra perlu push manual nanti
+3. **Enable LiteRT-LM + ONNX Runtime** di `build.gradle.kts` (Phase 1 deps yang di-defer di Phase 0 sekarang aktif)
+4. **33 file Kotlin baru** untuk LLM adapter + Task entity + AgentRuntime + Memory + tools + UI
+
+### Module yang Ditulis Phase 1
+
+**ai/llm/ (7 files):**
+- `AgentPrompt.kt` — input bundle (system + task + history + world + memory + tools + emotion)
+- `InferenceAdapter.kt` — abstract interface + AdapterCapability + AdapterTarget enum
+- `PromptBuilder.kt` — Gemma instruct template builder (system prompt Fuu)
+- `adapters/StubAdapter.kt` — dev placeholder (rule-based, untuk test agent loop tanpa Gemma)
+- `adapters/GemmaAdapter.kt` — LiteRT-LM skeleton (lazy init, graceful fail kalau model belum ada)
+- `InferenceRouter.kt` — task pinning + cascade (Gemma → Stub fallback)
+- `ResponseParser.kt` — parse raw response → LlmOutcome (Done/AwaitUser/ToolCalls/Reasoning/Escalate) dengan 3-tier fallback
+
+**agent/ (5 files):**
+- `TaskManager.kt` — CRUD + slot tracking (Phase 1: 1 slot; Phase 8 → 3-5)
+- `ConversationManager.kt` — entry user input → create Task channel=CHAT
+- `ContextBuilder.kt` — build AgentPrompt dengan hybrid memory (auto-include top-3 high-confidence)
+- `AgentRuntime.kt` — orchestrator loop (tick scheduler + executeTask iterative)
+- `tools/ToolSpec.kt` — ToolCall, ToolResult sealed, ErrorClass, ToolSeverity, ToolCost, Tool interface
+- `tools/ToolRegistry.kt` — Hilt @IntoMap registry
+- `tools/ToolDispatcher.kt` — dumb executor + timeout + audit log
+
+**agent/tools/impl/ (6 tools):**
+- `WaitTool.kt`, `AwaitUserTool.kt`, `IntentOpenTool.kt`, `SystemActionTool.kt`,
+  `MemoryRememberTool.kt`, `MemoryRecallTool.kt`
+
+**data/database/ (3 files):**
+- `TaskEntity.kt` + `AgentStepEntity.kt` (+ FSM enums TaskChannel, TaskStatus, NextIntent)
+- `MemoryRecordEntity.kt` (+ MemoryCategory enum)
+- `TaskDao.kt` (3 DAOs: TaskDao, AgentStepDao, MemoryDao)
+- `AppDatabase.kt` updated ke v2 dengan 4 entities
+
+**data/repository/ (2 files):**
+- `TaskRepository.kt` — CRUD task + append agent step + cleanup
+- `MemoryRepository.kt` — CRUD record + cleanup
+
+**memory/ (3 files):**
+- `MemoryStore.kt` — vector remember + recall (cosine similarity)
+- `embedding/EmbeddingProvider.kt` — ONNX skeleton dengan hash-based fallback Phase 1 (TODO: bind multilingual-e5-small saat model file siap)
+
+**world/ (2 files):**
+- `WorldSnapshot.kt` — data class (foreground app, battery, network, screen, locale, tz)
+- `WorldObserver.kt` — snapshot per tick
+
+**ui/ (4 files):**
+- `chat/ChatScreen.kt` — text input chat panel + Fuu response list
+- `debug/TaskListScreen.kt` — semua task across channels
+- `debug/TaskDetailScreen.kt` — agent step trace
+- `MainActivity.kt` updated dengan NavHost (chat / tasks / task/{id})
+
+**di/ (1 file):**
+- `ToolsModule.kt` — @IntoMap binding 6 tools dasar
+- `AppModule.kt` updated dengan 3 DAOs baru
+
+**service/ChibiService.kt** updated — inject AgentRuntime, call `start()` di onStartCommand + `stop()` di onDestroy.
+
+Total: 33 file baru + 5 file modified.
+
+### Build Result
+
+- APK: `app/build/outputs/apk/debug/app-debug.apk`
+- Size: **228 MB** (naik dari 99 MB karena include LiteRT-LM `.so` + ONNX Runtime native libs)
+- SHA-256: `3bfb8e2cfa51ea8124fe2601c577808f49cff0add53d6030caf3a59608ce8e2b`
+- Build time: 30 detik (warm)
+- Kotlin compile clean, 1 warning kosmetik (No cast needed di AgentRuntime line 125)
+
+### Issue Encountered & Fixed
+
+1. **`hiltViewModelProvider` import error** di `TaskDetailScreen.kt` — di-hapus (tidak dipakai)
+2. **Build di shell baru** sempat fail `gradlew not found` karena cwd berbeda → fix dengan absolute `cd` di command
+
+### Sub-milestone TODO (Phase 1 belum 100% functional)
+
+- **`GemmaAdapter.runActualInference()`** masih `throw NotImplementedError`. Setelah `.task` model file di-push ke device (`adb push gemma-4-4b-q4.task /data/data/com.chibiclaw/files/models/`), bind ke LiteRT-LM API call. InferenceRouter sementara fallback ke StubAdapter (dev mode).
+- **`EmbeddingProvider`** pakai hash-based pseudo-embedding (bukan semantic). Setelah `e5_small_q8.onnx` + tokenizer binding siap, replace dengan ONNX Runtime call.
+- **Phase 1 acceptance test** (text "buka senter" via chat → flashlight on) — bisa di-test sekarang dengan StubAdapter, real Gemma di sub-milestone setelah model file siap.
+
+### Keputusan di Session Ini
+
+Tidak ada ADR baru. Implementasi straightforward ikut blueprint Phase 1.
+
+### Aksi Dilakukan
+
+- ✅ Recover docs (`research/`, `Design/`, `v4/`) dari stash
+- ✅ Commit Phase 0 (1cb7a75) — push pending credential
+- ✅ Update `build.gradle.kts` enable LiteRT-LM + ONNX Runtime deps
+- ✅ Tulis 33 file Kotlin Phase 1
+- ✅ Update database schema v1 → v2 (4 entities)
+- ✅ Wire AgentRuntime ke ChibiService onStart/onDestroy
+- ✅ Build verify compile sukses (30s warm)
+- ❌ Belum install ke HP (ADR-011)
+- ❌ Belum commit Phase 1 ke git (akan di akhir session)
+- ❌ GemmaAdapter actual inference belum live (sub-milestone)
+- ❌ EmbeddingProvider real ONNX belum live (sub-milestone)
+
+### Open Items / Next
+
+- **Commit Phase 1** ke git (lokal). Push butuh kredensial Lendra.
+- **Phase 1 sub-milestone**: bind LiteRT-LM + ONNX Runtime aktual setelah model files tersedia
+- **Phase 2** ready: Voice + Emotion (2.5 minggu). microWakeWord skip ADR-006, manual button mic, Whisper STT, ElevenLabs streaming TTS, Wav2Small + roberta emotion
+
+### State Akhir Session
+
+- 33 file Kotlin Phase 1 baru, 5 file modified (config + ChibiService + MainActivity + AppModule + AppDatabase)
+- Total 57 file Kotlin di `app/src/main/java/com/chibiclaw/`
+- Working tree: belum committed Phase 1 (akan commit setelah update docs)
+- APK build sukses, belum install
+- Backlog sub-milestone: GemmaAdapter live + EmbeddingProvider live (butuh model files di device)
+
+---
+
 ## Session 2026-05-13 — Phase 0 Implementation
 
 **Durasi:** ~1 jam

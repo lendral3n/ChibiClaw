@@ -21,10 +21,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.service.ChibiService
+import com.chibiclaw.ui.chat.ChatScreen
+import com.chibiclaw.ui.debug.TaskDetailScreen
+import com.chibiclaw.ui.debug.TaskListScreen
 import com.chibiclaw.ui.setup.SetupNavigator
 import com.chibiclaw.ui.theme.ChibiClawTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,7 +70,7 @@ class MainActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background),
                     ) {
                         if (setupComplete) {
-                            MinimalHomePlaceholder()
+                            HomeNavigation()
                         } else {
                             SetupNavigator(
                                 onRequestOverlayPermission = { requestOverlayPermission() },
@@ -96,18 +102,18 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MinimalHomePlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "ChibiClaw Phase 0\n" +
-                "Service jalan, bubble overlay aktif.\n" +
-                "Phase 1+ akan tambah agent runtime di sini.",
-            style = MaterialTheme.typography.bodyLarge,
-        )
+private fun HomeNavigation() {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "chat") {
+        composable("chat") {
+            ChatScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
+        }
+        composable("tasks") {
+            TaskListScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
+        }
+        composable("task/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            TaskDetailScreen(taskId = id)
+        }
     }
 }

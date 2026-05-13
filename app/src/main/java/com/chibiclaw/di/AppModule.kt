@@ -1,8 +1,11 @@
 package com.chibiclaw.di
 
 import android.content.Context
+import com.chibiclaw.data.database.AgentStepDao
 import com.chibiclaw.data.database.AppDatabase
 import com.chibiclaw.data.database.AuditDao
+import com.chibiclaw.data.database.MemoryDao
+import com.chibiclaw.data.database.TaskDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,4 +29,13 @@ object AppModule {
 
     @Provides
     fun provideAuditDao(db: AppDatabase): AuditDao = db.auditDao()
+
+    @Provides
+    fun provideTaskDao(db: AppDatabase): TaskDao = db.taskDao()
+
+    @Provides
+    fun provideAgentStepDao(db: AppDatabase): AgentStepDao = db.agentStepDao()
+
+    @Provides
+    fun provideMemoryDao(db: AppDatabase): MemoryDao = db.memoryDao()
 }

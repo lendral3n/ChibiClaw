@@ -21,30 +21,37 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-13 session "Phase 0 Implementation"
+**Update terakhir:** 2026-05-13 session "Phase 1 Implementation (Agent Core)"
 
-**Phase aktif:** Phase 0 selesai compile. Phase 1 ready untuk start.
+**Phase aktif:** Phase 1 selesai compile. Phase 2 ready untuk start.
 
-**Phase 0 Status:**
-- ✅ 24 file Kotlin written
-- ✅ APK debug build sukses (99 MB, SHA-256 `20e19e9ba29e972e34e654a3aa703bab63caad2d74ddf5335d0b85de3d9995aa`)
-- ✅ Manifest + gradle + resources updated
-- ❌ Belum install ke HP fisik (sesuai ADR-011 test cuma di Phase 9)
-- ❌ Belum commit ke git (tunggu Lendra approve)
+**Phase 0 Status:** ✅ DONE
+- Committed: `1cb7a75 phase-0: foundation rewrite — agent-native architecture`
+- Push: PENDING (credential di sistem ini punya akses `gorenglele`, butuh push manual dari Lendra)
+
+**Phase 1 Status:** ✅ Compile DONE (sub-milestone pending)
+- 33 file Kotlin baru (LLM adapter + entities + repos + AgentRuntime + 6 tools + UI)
+- Total 57 file Kotlin di `app/src/main/java/com/chibiclaw/`
+- APK debug: 228 MB, SHA-256 `3bfb8e2cfa51ea8124fe2601c577808f49cff0add53d6030caf3a59608ce8e2b`
+- Build sukses 30 detik
+- Belum committed (akan commit setelah update docs ini)
+- ❌ Belum install ke HP (ADR-011)
+
+**Phase 1 Sub-milestone TODO** (compile OK tapi belum 100% live):
+- `GemmaAdapter.runActualInference()` masih `NotImplementedError`. InferenceRouter fallback ke StubAdapter (dev). Setelah `.task` model file di-push ke device + LiteRT-LM API binding lengkap → live Gemma inference.
+- `EmbeddingProvider` pakai hash-based pseudo-embedding (bukan semantic). Setelah `e5_small_q8.onnx` + tokenizer binding siap, replace dengan ONNX Runtime call.
 
 **Working tree:**
-- 24 file Kotlin baru di `app/src/main/java/com/chibiclaw/`
-- Modified: `app/build.gradle.kts`, `gradle/libs.versions.toml`, `app/src/main/AndroidManifest.xml`, `app/src/main/res/values/strings.xml`
-- Deleted: `app/src/main/res/xml/accessibility_service_config.xml` (akan dibuat ulang Phase 3)
-- Stash `v4-rewrite-archive-2026-05-13` (preserve v3+v4 scaffolding) + `v4-scaffolding-pre-phase0-2026-05-12`
-- Git: di branch `main`, HEAD masih V2 era commit (Phase 0 belum committed)
+- Phase 1 files: 33 baru + 5 modified (Phase 0 sudah committed)
+- Stash: `v4-rewrite-archive-2026-05-13` + `v4-scaffolding-pre-phase0-2026-05-12`
+- Git: di branch `main`, HEAD = `1cb7a75` Phase 0
 
-**Next action:** Konfirmasi dengan Lendra:
-1. Commit Phase 0 ke git sebelum lanjut Phase 1? (recommend yes — milestone clean)
-2. Install APK ke HP buat sanity test bubble overlay + setup wizard? (opsional, ADR-011)
-3. Lanjut Phase 1 (Agent Core, 5 minggu) — paling kompleks, butuh LiteRT-LM integration
+**Next action:**
+1. Commit Phase 1 ke git lokal — done setelah docs update
+2. **Phase 1 sub-milestone**: bind LiteRT-LM + ONNX Runtime real (butuh model files di device)
+3. **Phase 2 (Voice + Emotion, 2.5 minggu)**: ready setelah sub-milestone Phase 1 verified atau bisa proceed dengan StubAdapter dev mode
 
-Detail Phase 1: [22-phase-1-agent-core.md](22-phase-1-agent-core.md).
+Detail Phase 2: [23-phase-2-voice-emotion.md](23-phase-2-voice-emotion.md).
 
 ---
 

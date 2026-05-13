@@ -9,39 +9,44 @@ import com.chibiclaw.data.database.converters.InstantConverter
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
- * Phase 0 database — hanya AuditLog entity.
+ * Phase 1: extend Phase 0 schema dengan agent core entities.
  *
- * Phase 1+ akan tambah: TaskEntity, AgentStepEntity, MemoryRecordEntity, dll
- * dengan migration explicit (jangan auto-migrate; data sensitif, harus terkontrol).
+ * Schema v2 entities:
+ * - AuditLog (Phase 0)
+ * - Task + AgentStep (Phase 1)
+ * - MemoryRecord (Phase 1)
  *
- * Database di-encrypt dengan SQLCipher passphrase yang di-store di
- * EncryptedSharedPreferences (Keystore-backed). Lihat SecurityModule.
+ * Phase 6 akan tambah StandingInstruction.
+ * Phase 8 akan tambah TaskDependency.
  */
 @Database(
     entities = [
         AuditLogEntity::class,
-        // Phase 1 add: TaskEntity, AgentStepEntity, MemoryRecordEntity, ModelConfigEntity, CommandHistoryEntity
-        // Phase 6 add: StandingInstructionEntity
+        TaskEntity::class,
+        AgentStepEntity::class,
+        MemoryRecordEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(InstantConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun auditDao(): AuditDao
+    abstract fun taskDao(): TaskDao
+    abstract fun agentStepDao(): AgentStepDao
+    abstract fun memoryDao(): MemoryDao
 
     companion object {
         private const val DB_NAME = "chibiclaw.db"
 
         fun create(context: Context, passphrase: ByteArray): AppDatabase {
-            // SQLCipher init harus dipanggil sekali sebelum Room create.
             System.loadLibrary("sqlcipher")
             val factory = SupportOpenHelperFactory(passphrase)
 
             return Room.databaseBuilder(context, AppDatabase::class.java, DB_NAME)
                 .openHelperFactory(factory)
-                .fallbackToDestructiveMigration(dropAllTables = false)
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
         }
     }

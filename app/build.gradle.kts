@@ -134,14 +134,14 @@ dependencies {
     // Logging
     implementation(libs.timber)
 
+    // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
+    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    implementation(libs.onnxruntime.android)
+
     // ===========================================================
     // Berikut akan di-aktifkan di phase selanjutnya. Sengaja keep
-    // commented supaya APK Phase 0 ringan & build cepat.
+    // commented supaya build Phase 1 tidak unduh extra dep yang belum dipakai.
     // ===========================================================
-    // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
-    // implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
-    // implementation(libs.onnxruntime.android)
-
     // Phase 3: Shizuku
     // implementation(libs.shizuku.api)
     // implementation(libs.shizuku.provider)
