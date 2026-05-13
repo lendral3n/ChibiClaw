@@ -1,5 +1,8 @@
 package com.chibiclaw.ai.llm
 
+import com.chibiclaw.ai.llm.adapters.ClaudeWebAdapter
+import com.chibiclaw.ai.llm.adapters.GPTWebAdapter
+import com.chibiclaw.ai.llm.adapters.GeminiFreeAdapter
 import com.chibiclaw.ai.llm.adapters.GemmaAdapter
 import com.chibiclaw.ai.llm.adapters.StubAdapter
 import com.chibiclaw.data.database.TaskEntity
@@ -9,19 +12,23 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Router yang pilih InferenceAdapter per Task. Cascade:
+ * Router yang pilih InferenceAdapter per Task. Cascade default:
  *
- *   1. Gemma local (default)
- *   2. Stub (dev fallback kalau Gemma belum tersedia)
+ *   1. Per-task pin (kalau ada, dari escalate_to_cloud)
+ *   2. Gemma local (kalau model tersedia + available)
+ *   3. Gemini free (kalau API key + quota)
+ *   4. Claude web (kalau session valid)
+ *   5. GPT web (kalau session valid)
+ *   6. Stub (dev fallback / no cloud configured)
  *
- * Phase 4 akan tambah Gemini free, Claude web, GPT web di chain.
- *
- * Per-task adapter pinning: LLM bisa emit tool `escalate_to_cloud` untuk pin
- * task ke adapter target (Phase 4+).
+ * Per-task adapter pinning: LLM emit `escalate_to_cloud` → pin task ke target.
  */
 @Singleton
 class InferenceRouter @Inject constructor(
     private val gemma: GemmaAdapter,
+    private val gemini: GeminiFreeAdapter,
+    private val claudeWeb: ClaudeWebAdapter,
+    private val gptWeb: GPTWebAdapter,
     private val stub: StubAdapter,
 ) {
     private val taskPinning = ConcurrentHashMap<String, String>()
@@ -30,26 +37,25 @@ class InferenceRouter @Inject constructor(
         val pinnedId = taskPinning[task.id]
         if (pinnedId != null) {
             val pinned = adapterById(pinnedId)
-            if (pinned != null && pinned.isAvailable()) return pinned
+            if (pinned != null && pinned.isAvailable()) {
+                Timber.d("Adapter pinned: ${pinned.id} for task ${task.id}")
+                return pinned
+            }
+            // Pinned tapi tidak available → drop pin, fallback cascade.
+            taskPinning.remove(task.id)
+            Timber.w("Pinned adapter $pinnedId unavailable; cascading")
         }
-        // Default cascade
-        return if (gemma.isAvailable()) {
-            gemma
-        } else {
-            Timber.w("Gemma not available, fallback to Stub (dev mode)")
-            stub
-        }
+        return cascadeAvailable()
     }
 
     suspend fun escalate(target: AdapterTarget, taskId: String): InferenceAdapter? {
-        val adapter = when (target) {
-            AdapterTarget.GEMMA -> gemma.takeIf { it.isAvailable() }
-            AdapterTarget.STUB -> stub
-            AdapterTarget.GEMINI, AdapterTarget.CLAUDE, AdapterTarget.GPT -> null  // Phase 4
+        val adapter = resolveTarget(target) ?: return null
+        if (!adapter.isAvailable()) {
+            Timber.w("Escalate ke ${adapter.id} gagal — adapter belum available")
+            return null
         }
-        if (adapter != null) {
-            taskPinning[taskId] = adapter.id
-        }
+        taskPinning[taskId] = adapter.id
+        Timber.i("Task $taskId pinned ke ${adapter.id}")
         return adapter
     }
 
@@ -59,8 +65,32 @@ class InferenceRouter @Inject constructor(
 
     fun pinnedAdapterFor(taskId: String): String? = taskPinning[taskId]
 
+    /** Snapshot semua adapter untuk Settings UI. */
+    fun allAdapters(): List<InferenceAdapter> = listOf(gemma, gemini, claudeWeb, gptWeb, stub)
+
+    private suspend fun cascadeAvailable(): InferenceAdapter {
+        // Priority: local first (zero cost), then cloud free, then cloud reverse.
+        if (gemma.isAvailable()) return gemma
+        if (gemini.isAvailable()) return gemini
+        if (claudeWeb.isAvailable()) return claudeWeb
+        if (gptWeb.isAvailable()) return gptWeb
+        Timber.w("No live adapter; fallback Stub (dev mode)")
+        return stub
+    }
+
+    private fun resolveTarget(target: AdapterTarget): InferenceAdapter? = when (target) {
+        AdapterTarget.GEMMA -> gemma
+        AdapterTarget.GEMINI -> gemini
+        AdapterTarget.CLAUDE -> claudeWeb
+        AdapterTarget.GPT -> gptWeb
+        AdapterTarget.STUB -> stub
+    }
+
     private fun adapterById(id: String): InferenceAdapter? = when (id) {
         gemma.id -> gemma
+        gemini.id -> gemini
+        claudeWeb.id -> claudeWeb
+        gptWeb.id -> gptWeb
         stub.id -> stub
         else -> null
     }

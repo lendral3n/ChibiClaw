@@ -6,6 +6,7 @@ import com.chibiclaw.agent.tools.impl.A11yDescribeScreenTool
 import com.chibiclaw.agent.tools.impl.A11yScrollTool
 import com.chibiclaw.agent.tools.impl.A11yTypeTool
 import com.chibiclaw.agent.tools.impl.AwaitUserTool
+import com.chibiclaw.agent.tools.impl.EscalateToolHandler
 import com.chibiclaw.agent.tools.impl.IntentOpenTool
 import com.chibiclaw.agent.tools.impl.IntentSendTool
 import com.chibiclaw.agent.tools.impl.MemoryRecallTool
@@ -90,4 +91,8 @@ abstract class ToolsModule {
 
     @Binds @IntoMap @StringKey("world_get_notifications")
     abstract fun bindWorldGetNotificationsTool(impl: WorldGetNotificationsTool): Tool
+
+    // ── Phase 4: Cloud escalation ───────────────────────────────────────────
+    @Binds @IntoMap @StringKey("escalate_to_cloud")
+    abstract fun bindEscalateToolHandler(impl: EscalateToolHandler): Tool
 }

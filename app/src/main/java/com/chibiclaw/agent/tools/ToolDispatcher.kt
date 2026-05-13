@@ -7,6 +7,8 @@ import com.chibiclaw.data.database.AuditResultStatus
 import com.chibiclaw.data.database.TaskEntity
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -64,9 +66,17 @@ class ToolDispatcher @Inject constructor(
 
         val timeoutMs = tool.spec.capability.latencyMsRange.last * 3L
 
+        // Phase 4: stamp __taskId untuk tools yang butuh task context
+        // (escalate_to_cloud pin per-task adapter). Tools lain ignore.
+        val effectiveCall = if (call.tool == "escalate_to_cloud") {
+            val argsWithTask = call.args.toMutableMap()
+            argsWithTask["__taskId"] = JsonPrimitive(task.id)
+            call.copy(args = JsonObject(argsWithTask))
+        } else call
+
         val result = try {
             withTimeoutOrNull(timeoutMs) {
-                tool.execute(call)
+                tool.execute(effectiveCall)
             } ?: ToolResult.Timeout(call.callId, timeoutMs)
         } catch (t: TimeoutCancellationException) {
             ToolResult.Timeout(call.callId, timeoutMs)

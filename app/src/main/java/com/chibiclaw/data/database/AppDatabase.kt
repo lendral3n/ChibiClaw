@@ -9,12 +9,11 @@ import com.chibiclaw.data.database.converters.InstantConverter
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
- * Phase 1: extend Phase 0 schema dengan agent core entities.
- *
- * Schema v2 entities:
+ * Schema v3 entities:
  * - AuditLog (Phase 0)
  * - Task + AgentStep (Phase 1)
  * - MemoryRecord (Phase 1)
+ * - ModelConfig (Phase 4 — adapter quota + session)
  *
  * Phase 6 akan tambah StandingInstruction.
  * Phase 8 akan tambah TaskDependency.
@@ -25,8 +24,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         TaskEntity::class,
         AgentStepEntity::class,
         MemoryRecordEntity::class,
+        ModelConfigEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(InstantConverter::class)
@@ -36,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun agentStepDao(): AgentStepDao
     abstract fun memoryDao(): MemoryDao
+    abstract fun modelConfigDao(): ModelConfigDao
 
     companion object {
         private const val DB_NAME = "chibiclaw.db"

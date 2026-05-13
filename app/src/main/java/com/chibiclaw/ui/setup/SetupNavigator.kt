@@ -5,25 +5,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.chibiclaw.ai.llm.webview.SessionExtractor
+import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.permissions.ShizukuManager
 
 /**
  * Setup wizard navigator.
  *
  * Step:
- * 1. PRIVACY_NOTICE — display full privacy notice, user agree/disagree
- * 2. CONSENT_OVERLAY — request SYSTEM_ALERT_WINDOW
- * 3. VENDOR_WIZARD — auto-detect + per-OEM guidance
- * 4. ACCESSIBILITY_SETUP — arahkan ke Settings → Accessibility (Phase 3)
- * 5. SHIZUKU_SETUP — info Shizuku, optional skip (Phase 3)
- * 6. DONE — call onSetupComplete
+ * 1. PRIVACY_NOTICE
+ * 2. CONSENT_OVERLAY
+ * 3. VENDOR_WIZARD
+ * 4. ACCESSIBILITY_SETUP (Phase 3)
+ * 5. SHIZUKU_SETUP (Phase 3)
+ * 6. GEMINI_SETUP (Phase 4)
+ * 7. CLAUDE_WEB_SETUP (Phase 4)
+ * 8. GPT_WEB_SETUP (Phase 4)
+ * 9. DONE
  *
- * Phase 2+ akan tambah step microphone consent + ElevenLabs API key.
- * Phase 4+ akan tambah cloud login WebView (Gemini/Claude/GPT).
+ * Phase 2+ microphone consent + ElevenLabs API key: TBD (defer Phase 9 polish).
  */
 @Composable
 fun SetupNavigator(
     shizukuManager: ShizukuManager,
+    securePreferences: SecurePreferences,
+    sessionExtractor: SessionExtractor,
     onRequestOverlayPermission: () -> Unit,
     onSetupComplete: () -> Unit,
 ) {
@@ -52,6 +58,24 @@ fun SetupNavigator(
 
         SetupStep.SHIZUKU_SETUP -> ShizukuSetupScreen(
             shizukuManager = shizukuManager,
+            onContinue = { step = SetupStep.GEMINI_SETUP },
+            onSkip = { step = SetupStep.GEMINI_SETUP },
+        )
+
+        SetupStep.GEMINI_SETUP -> GeminiSetupScreen(
+            securePreferences = securePreferences,
+            onContinue = { step = SetupStep.CLAUDE_WEB_SETUP },
+            onSkip = { step = SetupStep.CLAUDE_WEB_SETUP },
+        )
+
+        SetupStep.CLAUDE_WEB_SETUP -> ClaudeWebSetupScreen(
+            sessionExtractor = sessionExtractor,
+            onContinue = { step = SetupStep.GPT_WEB_SETUP },
+            onSkip = { step = SetupStep.GPT_WEB_SETUP },
+        )
+
+        SetupStep.GPT_WEB_SETUP -> GPTWebSetupScreen(
+            sessionExtractor = sessionExtractor,
             onContinue = { step = SetupStep.DONE },
             onSkip = { step = SetupStep.DONE },
         )
@@ -69,5 +93,8 @@ enum class SetupStep {
     VENDOR_WIZARD,
     ACCESSIBILITY_SETUP,
     SHIZUKU_SETUP,
+    GEMINI_SETUP,
+    CLAUDE_WEB_SETUP,
+    GPT_WEB_SETUP,
     DONE,
 }

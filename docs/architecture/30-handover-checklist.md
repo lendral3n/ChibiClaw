@@ -21,15 +21,16 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-13 session "Phase 3 Tools Mid (a11y + Shizuku + messaging + SafetyGate)"
+**Update terakhir:** 2026-05-14 session "Phase 4 Cloud Escalation (Gemini + Claude/GPT web + Router cascade)"
 
-**Phase aktif:** Phase 3 selesai compile (100% W1–W3 + SafetyGate). Phase 4 ready untuk start.
+**Phase aktif:** Phase 4 selesai compile (100%). Phase 5 ready untuk start.
 
 **Phase Status Summary:**
 - **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
 - **Phase 1** (Agent Core): ✅ Compile DONE (85%). Commit `8f6547c` + `fb9355a`.
-- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Belum committed (akan masuk Phase 3 commit).
-- **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Belum committed.
+- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Commit `c577d33`.
+- **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Commit `86557c6`.
+- **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Belum committed.
 
 **Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
 **Build:** sukses 54 detik (warm post-Phase3), APK debug
@@ -40,16 +41,13 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
 
 **Working tree:**
-- Phase 2 files: 13 baru + 7 modified
-- Phase 3 files: 22 baru (4 a11y tools, 3 shizuku tools, 3 world tools, ShizukuManager, ChibiShizukuService, AIDL, ChibiAccessibilityService, A11yTreeWalker, ChibiNotificationListener, SafetyGate, ConfirmationOverlay, AccessibilitySetupScreen, ShizukuSetupScreen, progress-audit-phase-3.md) + 5 modified (ToolsModule, ToolDispatcher, OverlayWindowManager, SetupNavigator, MainActivity, ToolSpec.UserDenied reason field)
-- CI/CD: `ci.yml` baru (debug verify), `build-release.yml` refactor (tag-trigger), `codemagic.yaml` deleted
-- Stash: `v4-rewrite-archive-2026-05-13` + `v4-scaffolding-pre-phase0-2026-05-12`
-- Git: HEAD = `fb9355a` (audit fix Phase 0+1). Lendra sudah push manual sampai sini.
+- Phase 4 files: 13 baru (GeminiFreeAdapter, ClaudeWebAdapter, GPTWebAdapter, CloudSessionRotator, InferenceRouter refactor, CloudSession, CloudLoginWebView, SessionExtractor, ModelConfigEntity, ModelConfigDao, AdapterQuotaTracker, EscalateToolHandler, GeminiSetupScreen, ClaudeWebSetupScreen, AiEngineSettingsScreen, progress-audit-phase-4.md) + 7 modified (AppDatabase v3, AppModule, ToolDispatcher __taskId stamp, ToolsModule, SetupNavigator, MainActivity, InferenceRouter)
+- Git: HEAD = `86557c6` (Phase 3 commit). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 2 + Phase 3 + CI/CD changes ke git lokal
+1. Commit Phase 4 ke git lokal
 2. Lendra push manual lagi
-3. **Phase 4 (Cloud Escalation: Gemini/Claude/GPT WebView)** ready start
+3. **Phase 5 (Vision: MediaProjection + OCR + screen_describe)** ready start
 4. Sub-milestone Phase 1+2 paralel kapan saja (push model files + enable deps optional)
 
 **CI/CD Behavior Baru:**
@@ -57,7 +55,8 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - Push tag `v*` (mis. `git tag v4.0.0 && git push --tags`) → `build-release.yml` build release + GitHub Release
 
 Detail Phase 3 audit: [progress-audit-phase-3.md](progress-audit-phase-3.md).
-Detail Phase 4: [25-phase-4-cloud-escalation.md](25-phase-4-cloud-escalation.md).
+Detail Phase 4 audit: [progress-audit-phase-4.md](progress-audit-phase-4.md).
+Detail Phase 5: [26-phase-5-vision.md](26-phase-5-vision.md).
 
 ---
 

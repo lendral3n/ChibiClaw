@@ -6,6 +6,91 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 4 Cloud Escalation (Gemini + Claude/GPT web reverse + Router cascade)
+
+**Durasi:** ~3 jam
+**Outcome:** Phase 4 selesai compile 100%. 3 cloud adapters + router cascade + Room quota table v3 + escalate_to_cloud tool + 3 setup steps + AI Engine Settings screen. Build success 50s.
+
+### Topik Kunci
+- GeminiFreeAdapter (REST /v1beta/models/gemini-2.5-flash:generateContent, free 1500/day)
+- ClaudeWebAdapter (SSE /api/organizations/{org}/chat_conversations/{conv}/completion)
+- GPTWebAdapter (SSE /backend-api/conversation)
+- InferenceRouter cascade Gemma → Gemini → Claude → GPT → Stub
+- AdapterQuotaTracker (Room v3 `model_config` table, daily reset by local TZ)
+- CloudLoginWebView + SessionExtractor (CookieManager + JS injection)
+- CloudSessionRotator (manual validate via Settings + future WorkManager 24h)
+- ToolDispatcher stamp `__taskId` ke args sebelum execute escalate_to_cloud
+- AI Engine Settings screen (status, quota, validate, clear session)
+
+### Module yang Ditulis Phase 4
+**Adapters & Router (5):**
+- `ai/llm/adapters/GeminiFreeAdapter.kt`
+- `ai/llm/adapters/ClaudeWebAdapter.kt`
+- `ai/llm/adapters/GPTWebAdapter.kt`
+- `ai/llm/adapters/CloudSessionRotator.kt`
+- `ai/llm/InferenceRouter.kt` (refactored cascade)
+
+**Session + WebView (3):**
+- `ai/llm/session/CloudSession.kt` (ClaudeWebSession + GPTWebSession)
+- `ai/llm/webview/CloudLoginWebView.kt` (+ CloudLoginScripts.CLAUDE_EXTRACT / GPT_EXTRACT)
+- `ai/llm/webview/SessionExtractor.kt`
+
+**Quota + DB (3):**
+- `data/database/ModelConfigEntity.kt` (kotlinx.datetime.Instant)
+- `data/database/ModelConfigDao.kt`
+- `ai/llm/AdapterQuotaTracker.kt`
+- AppDatabase v2 → v3
+
+**Tool + DI (3):**
+- `agent/tools/impl/EscalateToolHandler.kt`
+- `di/ToolsModule.kt` (escalate_to_cloud binding)
+- `di/AppModule.kt` (provideModelConfigDao)
+- `agent/tools/ToolDispatcher.kt` (stamp __taskId)
+
+**Setup wizard (3):**
+- `ui/setup/GeminiSetupScreen.kt`
+- `ui/setup/ClaudeWebSetupScreen.kt` (+ GPTWebSetupScreen)
+- `ui/setup/SetupNavigator.kt` (9-step)
+
+**Settings UI (1):**
+- `ui/settings/AiEngineSettingsScreen.kt`
+- `ui/MainActivity.kt` (inject router/quota/rotator + NavHost route settings/ai_engine)
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 50s
+43 actionable tasks: 11 executed, 32 up-to-date
+```
+
+### Issue Encountered & Fixed
+- `java.time.Instant` vs `kotlinx.datetime.Instant` mismatch — InstantConverter only handles kotlinx flavor. Fixed ModelConfigEntity + Dao + Tracker.
+- ToolCall doesn't carry taskId for escalate router pin — solved by ToolDispatcher stamping `__taskId` ke args sebelum tool.execute().
+
+### Keputusan di Session Ini
+- Cascade priority: local zero-cost first, then free cloud, then reverse-engineered.
+- WebView session extraction pakai JS bridge `window.ChibiBridge` — minimal binding, JS sendiri yang fetch endpoint mundane.
+- Schema v3 dengan fallbackToDestructiveMigration (dev mode acceptable).
+- Streaming per-token defer ke Phase 9 polish.
+- AuditLog LLM_CALL_CLOUD enum defer Phase 9 — generic TOOL_EXECUTED cukup untuk escalate signal.
+
+### Aksi Dilakukan
+- 13 file Kotlin baru + 7 file modified
+- `progress-audit-phase-4.md` ditulis lengkap
+
+### Open Items / Next
+- Commit Phase 4
+- Push manual
+- Phase 5 (Vision: MediaProjection + OCR + screen_describe) ready start
+
+### State Akhir Session
+- Build hijau, 3 cloud adapters compile-ready, fail-soft kalau no session/key
+- LLM bisa emit escalate_to_cloud → router pin per task
+- Setup wizard 9-step lengkap, all optional with skip path
+- AI Engine Settings live di NavHost
+
+---
+
 ## Session 2026-05-13 — Phase 3 Tools Mid (a11y + Shizuku + messaging + SafetyGate)
 
 **Durasi:** ~2.5 jam (lanjutan setelah Phase 2 + CI/CD refactor)

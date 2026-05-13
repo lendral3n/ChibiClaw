@@ -26,12 +26,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
+import com.chibiclaw.ai.llm.webview.SessionExtractor
 import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.permissions.ShizukuManager
 import com.chibiclaw.service.ChibiService
+import com.chibiclaw.ai.llm.AdapterQuotaTracker
+import com.chibiclaw.ai.llm.InferenceRouter
+import com.chibiclaw.ai.llm.adapters.CloudSessionRotator
 import com.chibiclaw.ui.chat.ChatScreen
 import com.chibiclaw.ui.debug.TaskDetailScreen
 import com.chibiclaw.ui.debug.TaskListScreen
+import com.chibiclaw.ui.settings.AiEngineSettingsScreen
 import com.chibiclaw.ui.setup.SetupNavigator
 import com.chibiclaw.ui.theme.ChibiClawTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -52,6 +57,10 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var securePreferences: SecurePreferences
     @Inject lateinit var auditLogger: AuditLogger
     @Inject lateinit var shizukuManager: ShizukuManager
+    @Inject lateinit var sessionExtractor: SessionExtractor
+    @Inject lateinit var router: InferenceRouter
+    @Inject lateinit var quotaTracker: AdapterQuotaTracker
+    @Inject lateinit var sessionRotator: CloudSessionRotator
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -72,10 +81,17 @@ class MainActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background),
                     ) {
                         if (setupComplete) {
-                            HomeNavigation()
+                            HomeNavigation(
+                                router = router,
+                                quotaTracker = quotaTracker,
+                                sessionRotator = sessionRotator,
+                                sessionExtractor = sessionExtractor,
+                            )
                         } else {
                             SetupNavigator(
                                 shizukuManager = shizukuManager,
+                                securePreferences = securePreferences,
+                                sessionExtractor = sessionExtractor,
                                 onRequestOverlayPermission = { requestOverlayPermission() },
                                 onSetupComplete = {
                                     securePreferences.setSetupComplete(true)
@@ -105,7 +121,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun HomeNavigation() {
+private fun HomeNavigation(
+    router: InferenceRouter,
+    quotaTracker: AdapterQuotaTracker,
+    sessionRotator: CloudSessionRotator,
+    sessionExtractor: SessionExtractor,
+) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "chat") {
         composable("chat") {
@@ -117,6 +138,14 @@ private fun HomeNavigation() {
         composable("task/{id}") { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id") ?: return@composable
             TaskDetailScreen(taskId = id)
+        }
+        composable("settings/ai_engine") {
+            AiEngineSettingsScreen(
+                router = router,
+                quotaTracker = quotaTracker,
+                rotator = sessionRotator,
+                sessionExtractor = sessionExtractor,
+            )
         }
     }
 }
