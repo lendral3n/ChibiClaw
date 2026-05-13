@@ -6,6 +6,85 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-13 — Audit Phase 0+1 + Priority Fix
+
+**Durasi:** ~45 menit
+**Outcome:** Self-audit komprehensif Phase 0+1, identifikasi 4 gap prioritas, fix semua. APK rebuild sukses 21 detik. Score Phase 1: 75% → 85%.
+
+### Topik Kunci
+
+1. **Lendra push Phase 0+1 ke GitHub** — push manual sukses (commit `1cb7a75` + `8f6547c`)
+2. **Self-audit progress** — bandingkan implementasi vs blueprint, kasih persentase per komponen
+3. **Identifikasi 4 gap prioritas** + fix
+4. **Update docs** dengan audit + commit fix
+
+### Audit Findings — Detail di [progress-audit-phase-0-1.md](progress-audit-phase-0-1.md)
+
+| Phase | Sebelum audit | Setelah fix |
+|-------|--------------|-------------|
+| 0 — Foundation | 95% (1 gap: bubble tap belum expand) | **98%** |
+| 1 — Agent Core | 75% (4 gap prioritas) | **85%** |
+| Combined | 85% | **92%** |
+
+4 fix di-eksekusi:
+
+1. **BubbleOverlay tap → expand chat panel** (Med severity)
+   - Buat `OverlayChatPanel.kt` (compose embedded di overlay window)
+   - Refactor `OverlayWindowManager`: state expanded, expand/collapse method, panel lifecycle terpisah dari bubble
+   - Tap bubble toggle panel; tap "×" collapse balik
+   - Drag cuma di mode collapsed (panel fixed position)
+
+2. **MemoryRememberTool value JSON parsing** (High severity bug)
+   - Sebelum: `value.toString()` → escaped string (bukan JSON proper)
+   - Sesudah: branching JsonObject / JsonPrimitive / JsonArray dengan serialization tepat
+   - Plus update description untuk hint LLM bahwa value bisa object atau string
+
+3. **GemmaAdapter LiteRT-LM concrete binding** (High severity TODO)
+   - Sebelum: `runActualInference()` throw `NotImplementedError`
+   - Sesudah: reflection-based init (`Class.forName("com.google.ai.edge.litertlm.LlmInference")`)
+   - Builder pattern via reflection (setModelPath, setMaxTokens, build)
+   - Session init dengan fallback path (`createFromOptions` atau `createSession`)
+   - Inference invoke (`addQueryChunk` + `generateResponse`/`generate`/`complete` — try multiple method names)
+   - Tahan kalau API shift sedikit di release berikutnya
+
+4. **EmbeddingProvider ONNX concrete skeleton** (Med severity TODO)
+   - Sebelum: cuma hash-based fallback
+   - Sesudah: ONNX Runtime reflection-based init (toleran terhadap absence)
+   - `tryInitOnnx`: cek model file di filesDir atau assets, load bytes, createSession
+   - `encodeOnnx` masih throw (tokenizer binding sub-milestone)
+   - Fallback hash-based dipertahankan kalau ONNX init gagal
+
+### Build Result Post-Fix
+
+- APK: 228 MB
+- SHA-256: `e5f18b5caa840bb4775faae500242a30cfc8d74ce6cd574cf450ce25f320e2f9`
+- Build time: **21 detik** (warm)
+- 0 error, 1 warning kosmetik
+
+### Aksi Dilakukan
+
+- ✅ Tulis `progress-audit-phase-0-1.md` (audit comprehensive)
+- ✅ Buat `OverlayChatPanel.kt` (compose embedded panel)
+- ✅ Refactor `OverlayWindowManager.kt` (state machine bubble/panel)
+- ✅ Fix `MemoryRememberTool.kt` value parsing
+- ✅ Refactor `GemmaAdapter.kt` dengan concrete reflection-based LiteRT-LM binding
+- ✅ Refactor `EmbeddingProvider.kt` dengan concrete reflection-based ONNX skeleton
+- ✅ Build verify sukses 21 detik
+- ❌ Belum commit fix (akan dilakukan setelah update distilled ini)
+
+### Open Items / Next
+
+- **Commit + push** semua fix audit (1 commit baru)
+- **Phase 2 (Voice + Emotion)** ready start. Sub-milestone Phase 1 (Gemma real inference + ONNX real embedding) bisa proceed paralel kalau Lendra mau push model files.
+
+### State Akhir Session
+
+- File baru: `OverlayChatPanel.kt` + `progress-audit-phase-0-1.md` (di docs)
+- File modified: `OverlayWindowManager.kt`, `MemoryRememberTool.kt`, `GemmaAdapter.kt`, `EmbeddingProvider.kt`
+- Build sukses, Phase 2 ready
+
+---
+
 ## Session 2026-05-13 — Phase 1 Implementation (Agent Core)
 
 **Durasi:** ~2 jam

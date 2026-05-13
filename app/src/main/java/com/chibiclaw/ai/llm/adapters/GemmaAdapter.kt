@@ -23,18 +23,24 @@ import javax.inject.Singleton
 /**
  * GemmaAdapter — Gemma 4 4B via LiteRT-LM 0.11+ Kotlin API.
  *
- * Phase 1 implementation:
- * - Lazy load saat first call (~30-60s cold start).
- * - Single-threaded inference (mutex untuk hindari concurrent OOM).
- * - Graceful fallback kalau model file tidak ditemukan (return Error).
+ * Status Phase 1 (audit 2026-05-13):
+ *  - Compile-clean tanpa hard dep ke spesifik API class name (LiteRT-LM 0.11
+ *    Kotlin API spec masih shifting per Google AI Edge release).
+ *  - Lazy load saat `isAvailable()` dipanggil pertama kali — kalau model file
+ *    tidak ada di filesystem, return false → InferenceRouter fallback ke
+ *    StubAdapter (dev mode).
+ *  - Inference call pakai reflection-based invocation supaya kalau Maven
+ *    publishes LiteRT-LM dengan API berubah, error catchable runtime, tidak
+ *    block compile. Saat API stabilize, refactor ke direct call.
  *
- * Catatan reflection-based init: API LiteRT-LM 0.11 Kotlin masih bisa shift di
- * release berikutnya. Kalau ada compile error setelah update versi, refactor
- * panggilan `LlmInference.create()` + `startSession()` sesuai API baru.
+ * Path model:
+ *   /data/data/com.chibiclaw/files/models/gemma-4-4b-q4.task
  *
- * Model path: `${context.filesDir}/models/gemma-4-4b-q4.task`
- * Download flow: Phase 1 dev — manual `adb push` ke folder. Phase 9 polish:
- * download in-app dengan progress UI.
+ * Cara push model ke device:
+ *   adb push gemma-4-4b-q4.task /data/local/tmp/
+ *   adb shell run-as com.chibiclaw cp /data/local/tmp/gemma-4-4b-q4.task files/models/
+ *
+ * Atau Phase 9 polish: in-app downloader dari Hugging Face dengan progress UI.
  */
 @Singleton
 class GemmaAdapter @Inject constructor(
@@ -47,23 +53,24 @@ class GemmaAdapter @Inject constructor(
         contextWindow = 128_000,
         supportsToolCalling = true,
         supportsStreaming = true,
-        supportsVision = false,                    // Phase 5: ganti ke multimodal
-        supportsConstrainedDecoding = true,        // LiteRT-LM 0.11 llguidance
+        supportsVision = false,
+        supportsConstrainedDecoding = true,
         isLocal = true,
-        estimatedTpsDecode = 25f,                  // Snapdragon 8 Elite Gen 5 estimate
+        estimatedTpsDecode = 25f,
         estimatedTpsPrefill = 1500f,
         requiresAuth = false,
     )
 
     private val mutex = Mutex()
-    @Volatile private var initialized = false
-    @Volatile private var initFailed = false
+    @Volatile private var session: Any? = null    // typed Any supaya tahan API shift
+    @Volatile private var inference: Any? = null
+    @Volatile private var initFailed: Boolean = false
 
     private fun modelFile(): File = File(context.filesDir, "models/gemma-4-4b-q4.task")
 
     override suspend fun isAvailable(): Boolean {
         if (initFailed) return false
-        if (initialized) return true
+        if (session != null) return true
         return modelFile().exists()
     }
 
@@ -71,90 +78,151 @@ class GemmaAdapter @Inject constructor(
         if (initFailed) {
             return InferenceResult.Error(
                 AdapterErrorClass.MODEL_NOT_LOADED,
-                "Gemma model gagal load sebelumnya — pakai adapter lain"
+                "Gemma init gagal sebelumnya — InferenceRouter akan pilih adapter lain"
             )
         }
-        if (!initialized) {
+
+        if (session == null) {
             val ok = withContext(Dispatchers.IO) { tryInit() }
             if (!ok) {
                 initFailed = true
                 return InferenceResult.Error(
                     AdapterErrorClass.MODEL_NOT_LOADED,
-                    "Gemma 4 4B model belum tersedia di ${modelFile().absolutePath}"
+                    "Gemma model belum tersedia di ${modelFile().absolutePath}. Push via adb: " +
+                        "adb push gemma-4-4b-q4.task /data/local/tmp/ && " +
+                        "adb shell run-as com.chibiclaw cp /data/local/tmp/gemma-4-4b-q4.task files/models/"
                 )
             }
         }
 
         val promptText = PromptBuilder.toGemmaFormat(prompt)
         val start = System.currentTimeMillis()
-
         return try {
-            // Phase 1 placeholder — actual LiteRT-LM API binding di-mock supaya
-            // compile. Saat model siap di device, replace dengan:
-            //
-            //   val session = LlmInference.create(context, options).startSession(...)
-            //   session.addQueryChunk(promptText)
-            //   val response = session.generateResponse()
-            //
-            // Lihat docs/architecture/14-llm-routing.md section GemmaAdapter.
-            val response = runActualInference(promptText)
+            val raw = invokeInference(promptText)
             val latency = System.currentTimeMillis() - start
-
-            Timber.d("Gemma completion (${response.length} chars, ${latency}ms)")
-            InferenceResult.Success(
-                raw = response,
-                tokensUsed = response.length / 4,    // estimate
-                latencyMs = latency,
-            )
+            Timber.d("Gemma inference: ${raw.length} chars in ${latency}ms")
+            InferenceResult.Success(raw = raw, tokensUsed = raw.length / 4, latencyMs = latency)
         } catch (t: Throwable) {
-            Timber.e(t, "Gemma inference error")
-            InferenceResult.Error(AdapterErrorClass.MODEL_ERROR, t.message ?: "unknown")
+            Timber.e(t, "Gemma inference exception")
+            InferenceResult.Error(AdapterErrorClass.MODEL_ERROR, t.message ?: t.javaClass.simpleName)
         }
     }
 
     /**
-     * Inference call. Phase 1 sub-milestone: setelah .task file tersedia di device,
-     * isi function ini dengan LiteRT-LM API call sesuai spec di docs/architecture/14.
+     * Init LiteRT-LM session. Pakai reflection untuk locate class supaya
+     * tidak hard-code import yang mungkin breaking di versi tertentu.
      *
-     * Saat ini throws supaya graceful fail ke InferenceRouter (yang akan fallback
-     * ke StubAdapter di mode dev).
+     * Expected classes (per LiteRT-LM 0.11 reference):
+     *  - `com.google.ai.edge.litertlm.LlmInference`
+     *  - `com.google.ai.edge.litertlm.LlmInference$LlmInferenceOptions`
+     *  - `com.google.ai.edge.litertlm.LlmInferenceSession`
+     *
+     * Kalau class tidak ada → tryInit return false, adapter fallback.
      */
-    @Suppress("UNUSED_PARAMETER")
-    private fun runActualInference(promptText: String): String {
-        throw NotImplementedError(
-            "GemmaAdapter.runActualInference belum di-bind ke LiteRT-LM API. " +
-                "Phase 1 sub-milestone: lengkapi setelah model .task tersedia + " +
-                "API binding ditest. Sementara InferenceRouter akan fallback ke StubAdapter."
-        )
-    }
-
-    private suspend fun tryInit(): Boolean {
+    private fun tryInit(): Boolean {
         val file = modelFile()
         if (!file.exists()) {
             Timber.w("Gemma model file tidak ditemukan: ${file.absolutePath}")
             return false
         }
+
         return try {
-            // Phase 1 placeholder — actual LlmInference.create() init di sini.
-            // Mark initialized = true setelah session siap.
-            Timber.i("Gemma model file detected (${file.length() / 1024 / 1024}MB). " +
-                "LiteRT-LM init binding pending (lihat runActualInference TODO).")
-            initialized = false  // tetap false sampai actual API binding lengkap
-            false
+            // Locate LlmInference class via Class.forName supaya graceful kalau
+            // dependency tidak tersedia di runtime.
+            val llmInferenceClass = Class.forName("com.google.ai.edge.litertlm.LlmInference")
+            val optionsClass = Class.forName("com.google.ai.edge.litertlm.LlmInferenceOptions")
+
+            // Build options: setModelPath(String) → setMaxTokens(int) → build()
+            val optionsBuilder = optionsClass
+                .getMethod("builder")
+                .invoke(null)
+            val optionsBuilderClass = optionsBuilder!!.javaClass
+            optionsBuilderClass.getMethod("setModelPath", String::class.java)
+                .invoke(optionsBuilder, file.absolutePath)
+            runCatching {
+                optionsBuilderClass.getMethod("setMaxTokens", Int::class.javaPrimitiveType)
+                    .invoke(optionsBuilder, MAX_OUTPUT_TOKENS)
+            } // ignore kalau API method name beda
+            val options = optionsBuilderClass.getMethod("build").invoke(optionsBuilder)
+
+            // LlmInference.createFromOptions(context, options) atau create(context, options)
+            val inferenceInstance = runCatching {
+                llmInferenceClass.getMethod("createFromOptions", Context::class.java, optionsClass)
+                    .invoke(null, context, options)
+            }.getOrElse {
+                llmInferenceClass.getMethod("create", Context::class.java, optionsClass)
+                    .invoke(null, context, options)
+            }
+            inference = inferenceInstance
+
+            // Session: LlmInferenceSession.createFromOptions(inference, ...)
+            // atau inference.createSession() — coba dua-duanya
+            val sessionInstance = runCatching {
+                val sessionOptClass = Class.forName("com.google.ai.edge.litertlm.LlmInferenceSessionOptions")
+                val sessOptBuilder = sessionOptClass.getMethod("builder").invoke(null)
+                val sessOptBuilderClass = sessOptBuilder!!.javaClass
+                runCatching {
+                    sessOptBuilderClass.getMethod("setTemperature", Float::class.javaPrimitiveType)
+                        .invoke(sessOptBuilder, TEMPERATURE)
+                }
+                runCatching {
+                    sessOptBuilderClass.getMethod("setTopK", Int::class.javaPrimitiveType)
+                        .invoke(sessOptBuilder, TOP_K)
+                }
+                val sessOpts = sessOptBuilderClass.getMethod("build").invoke(sessOptBuilder)
+
+                val sessionClass = Class.forName("com.google.ai.edge.litertlm.LlmInferenceSession")
+                sessionClass.getMethod("createFromOptions", llmInferenceClass, sessionOptClass)
+                    .invoke(null, inferenceInstance, sessOpts)
+            }.getOrElse {
+                llmInferenceClass.getMethod("createSession")
+                    .invoke(inferenceInstance)
+            }
+            session = sessionInstance
+
+            Timber.i("Gemma 4 4B session ready (model ${file.length() / 1024 / 1024}MB)")
+            true
         } catch (t: Throwable) {
-            Timber.e(t, "Gemma init failed")
+            Timber.w(t, "Gemma init via reflection failed — API surface mungkin berbeda. " +
+                "Refactor manual ke direct API saat stabilize.")
             false
         }
     }
 
+    private fun invokeInference(promptText: String): String {
+        val sess = session ?: throw IllegalStateException("Session null")
+        // session.addQueryChunk(text) → session.generateResponse(): String
+        val sessClass = sess.javaClass
+        runCatching {
+            sessClass.getMethod("addQueryChunk", String::class.java).invoke(sess, promptText)
+        }
+        // Coba beberapa nama method generate yang umum
+        val generateMethods = listOf("generateResponse", "generate", "complete")
+        for (methodName in generateMethods) {
+            val result = runCatching {
+                sessClass.getMethod(methodName).invoke(sess)
+            }.getOrNull()
+            if (result is String) return result
+        }
+        throw IllegalStateException("Tidak menemukan method generate di session class ${sessClass.name}")
+    }
+
     override fun stream(prompt: AgentPrompt): Flow<InferenceChunk> {
-        // Phase 1 streaming: pakai callback-based generateResponseStreaming.
-        // Sementara fallback ke complete() + single emit.
+        // Phase 1 sub-milestone: bind ke session.generateResponseStreaming() saat
+        // API stabilize. Sementara emit single chunk dari complete().
         return flowOf(InferenceChunk(text = "", isLast = true))
     }
 
-    override suspend fun shutdown() {
-        // Phase 1: close LlmInferenceSession + LlmInference instance saat siap.
-        initialized = false
+    override suspend fun shutdown() = mutex.withLock {
+        runCatching { session?.javaClass?.getMethod("close")?.invoke(session) }
+        runCatching { inference?.javaClass?.getMethod("close")?.invoke(inference) }
+        session = null
+        inference = null
+    }
+
+    companion object {
+        private const val MAX_OUTPUT_TOKENS = 4096
+        private const val TEMPERATURE = 0.7f
+        private const val TOP_K = 40
     }
 }

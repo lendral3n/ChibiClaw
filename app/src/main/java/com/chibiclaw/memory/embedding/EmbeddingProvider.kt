@@ -1,10 +1,11 @@
 package com.chibiclaw.memory.embedding
 
-import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
@@ -12,68 +13,128 @@ import javax.inject.Singleton
 import kotlin.math.sqrt
 
 /**
- * EmbeddingProvider — generate 384-dim FloatArray dari teks pakai
- * multilingual-e5-small ONNX INT8.
+ * EmbeddingProvider — multilingual-e5-small ONNX INT8 (384-dim).
  *
- * Phase 1 sub-milestone: implementasi sub-ideal (hash-based dummy) supaya
- * MemoryStore + ContextBuilder bisa berfungsi sambil menunggu:
- *  1. Model file `e5_small_q8.onnx` tersedia di assets/models/
- *  2. Tokenizer binding (HuggingFace tokenizer Kotlin atau bundled BPE)
- *  3. ONNX Runtime init + inference path
+ * Status Phase 1 (audit 2026-05-13):
+ *  - Concrete ONNX Runtime skeleton ada via reflection (graceful kalau model
+ *    + tokenizer belum tersedia di assets).
+ *  - Fallback hash-based pseudo-embedding kalau ONNX init gagal → MemoryStore
+ *    tetap berfungsi, tapi similarity bukan semantic real.
  *
- * Setelah 3 hal di atas siap, replace [encode] internal dengan actual ONNX call.
- * Lihat docs/architecture/16-memory-system.md section EmbeddingProvider.
+ * Path model expected:
+ *   - assets/models/e5_small_q8.onnx (~50 MB)
+ *   - tokenizer.json + library binding (Phase 1 sub-milestone)
+ *
+ * Phase 1 sub-milestone TODO:
+ *  1. Push e5_small_q8.onnx ke assets (atau download in-app)
+ *  2. Tokenizer binding: ai.djl.huggingface.tokenizers (~12 MB) atau bundled BPE
+ *  3. Implement [encodeOnnx] real (sekarang masih NotImplementedError)
  */
 @Singleton
 class EmbeddingProvider @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     private val mutex = Mutex()
-    @Volatile private var initialized = false
+    @Volatile private var initialized: Boolean = false
+    @Volatile private var initFailed: Boolean = false
+    @Volatile private var ortSession: Any? = null
 
     suspend fun init() = mutex.withLock {
-        if (initialized) return@withLock
-        // Phase 1 placeholder: kalau model file exists, init ONNX session.
-        // Sementara langsung mark initialized untuk hash-based fallback.
-        initialized = true
-        Timber.i("EmbeddingProvider initialized (Phase 1 fallback hash-based)")
+        if (initialized || initFailed) return@withLock
+        initialized = tryInitOnnx()
+        initFailed = !initialized
+        if (initFailed) {
+            Timber.w("EmbeddingProvider: ONNX init gagal, fallback ke hash-based pseudo-embedding")
+        }
     }
 
-    suspend fun encode(text: String): FloatArray = mutex.withLock {
-        if (!initialized) init()
-        // TODO Phase 1 sub-milestone: real ONNX inference.
-        // Fallback: deterministic hash-based pseudo-embedding (bukan semantic,
-        // tapi MemoryStore tetap bisa dedupe + similarity sederhana).
-        hashEmbedding("passage: $text")
+    suspend fun encode(text: String): FloatArray {
+        if (!initialized && !initFailed) init()
+        return if (initialized) {
+            runCatching { encodeOnnx("passage: $text") }
+                .getOrElse { encodeFallback("passage: $text") }
+        } else {
+            encodeFallback("passage: $text")
+        }
     }
 
-    suspend fun encodeQuery(query: String): FloatArray = mutex.withLock {
-        if (!initialized) init()
-        hashEmbedding("query: $query")
+    suspend fun encodeQuery(query: String): FloatArray {
+        if (!initialized && !initFailed) init()
+        return if (initialized) {
+            runCatching { encodeOnnx("query: $query") }
+                .getOrElse { encodeFallback("query: $query") }
+        } else {
+            encodeFallback("query: $query")
+        }
     }
 
     /**
-     * Pseudo-embedding via SHA-256 + sliding hash → 384-dim normalized float.
-     *
-     * Bukan semantic, tapi unique per teks. MemoryStore similarity akan
-     * miss real semantic match sampai ONNX inference live — itu trade-off
-     * Phase 1 conscious.
+     * ONNX init via reflection — toleran terhadap absence onnxruntime di runtime.
      */
-    private fun hashEmbedding(text: String): FloatArray {
+    private fun tryInitOnnx(): Boolean {
+        return try {
+            val modelFile = File(context.filesDir, "models/e5_small_q8.onnx")
+            val modelBytes = if (modelFile.exists()) {
+                modelFile.readBytes()
+            } else {
+                runCatching {
+                    context.assets.open("models/e5_small_q8.onnx").use { it.readBytes() }
+                }.getOrElse {
+                    Timber.w("e5_small_q8.onnx tidak ditemukan di filesDir atau assets")
+                    return false
+                }
+            }
+
+            val ortEnvClass = Class.forName("ai.onnxruntime.OrtEnvironment")
+            val env = ortEnvClass.getMethod("getEnvironment").invoke(null)
+            val session = ortEnvClass.getMethod("createSession", ByteArray::class.java)
+                .invoke(env, modelBytes)
+            ortSession = session
+
+            Timber.i("EmbeddingProvider ONNX session ready (model ${modelBytes.size / 1024 / 1024}MB)")
+            true
+        } catch (t: Throwable) {
+            Timber.w(t, "EmbeddingProvider ONNX init failed")
+            false
+        }
+    }
+
+    /**
+     * Real ONNX inference. Phase 1 sub-milestone implementation.
+     *
+     * Pipeline:
+     *   tokenize(prefixedText) → input_ids[seq_len], attention_mask[seq_len]
+     *   ort.run({input_ids, attention_mask}) → last_hidden_state[1, seq_len, 384]
+     *   mean_pool over attention_mask → [384]
+     *   L2 normalize → [384]
+     *
+     * Tokenizer dependency belum di-enable. Phase 1 audit fallback ke hash-based.
+     */
+    private fun encodeOnnx(prefixedText: String): FloatArray {
+        throw NotImplementedError(
+            "ONNX encode butuh tokenizer binding. Phase 1 sub-milestone: bind " +
+                "ai.djl.huggingface.tokenizers atau bundled BPE. Fallback hash-based."
+        )
+    }
+
+    /**
+     * Hash-based pseudo-embedding via SHA-256. **Bukan semantic** — deterministic
+     * per teks, tapi tidak capture meaning. MemoryStore similarity search akan
+     * miss real semantic match sampai ONNX live.
+     *
+     * Tetap L2-normalized supaya cosine sim formula konsisten dengan future ONNX.
+     */
+    private fun encodeFallback(text: String): FloatArray {
         val md = java.security.MessageDigest.getInstance("SHA-256")
-        val bytes = md.digest(text.toByteArray(Charsets.UTF_8))
-        // SHA-256 = 32 bytes. Expand to 384 dim by hashing rounds.
+        var seed = md.digest(text.toByteArray(Charsets.UTF_8))
         val result = FloatArray(EMBED_DIM)
-        var seed = bytes
         var offset = 0
         while (offset < EMBED_DIM) {
             for (b in seed) {
                 if (offset >= EMBED_DIM) break
-                // Map byte (-128..127) → float (-1..1)
                 result[offset] = b.toFloat() / 128f
                 offset++
             }
-            // Re-hash for next round
             seed = md.digest(seed)
         }
         return normalize(result)

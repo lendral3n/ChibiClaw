@@ -10,13 +10,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.chibiclaw.agent.ConversationManager
+import com.chibiclaw.data.repository.TaskRepository
 import com.chibiclaw.ui.theme.ChibiClawTheme
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
@@ -25,26 +25,30 @@ import javax.inject.Singleton
 import kotlin.math.abs
 
 /**
- * Manage overlay window di atas semua app (SYSTEM_ALERT_WINDOW).
+ * Manage overlay window. Phase 1: dua mode — collapsed bubble + expanded chat panel.
  *
- * Phase 0: bubble collapsed dengan drag + snap-to-edge.
- * Phase 1+: tap to expand chat panel, status color per ChibiState.
+ * Tap bubble → toggle expanded state. Saat expanded, panel chat ~360x520dp
+ * muncul di samping bubble; tap "×" → kembali ke bubble.
  *
- * Window flags:
- * - TYPE_APPLICATION_OVERLAY: standard untuk Android 8+
- * - FLAG_NOT_FOCUSABLE: tidak rebut keyboard focus dari app di bawah
- * - FLAG_NOT_TOUCH_MODAL: touch outside bubble pass-through ke app
- * - FLAG_LAYOUT_NO_LIMITS: bubble bisa di edge
+ * Drag: cuma di mode bubble (collapsed). Saat expanded, panel fixed position.
  */
 @Singleton
 class OverlayWindowManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val windowManager: WindowManager,
+    private val conversationManager: ConversationManager,
+    private val taskRepository: TaskRepository,
 ) {
 
-    private var lifecycleOwner: OverlayLifecycleOwner? = null
-    private var composeView: ComposeView? = null
-    private var layoutParams: WindowManager.LayoutParams? = null
+    private var bubbleLifecycleOwner: OverlayLifecycleOwner? = null
+    private var bubbleView: ComposeView? = null
+    private var bubbleParams: WindowManager.LayoutParams? = null
+
+    private var panelLifecycleOwner: OverlayLifecycleOwner? = null
+    private var panelView: ComposeView? = null
+    private var panelParams: WindowManager.LayoutParams? = null
+
+    private var expanded: Boolean = false
 
     fun canDrawOverlays(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -58,13 +62,10 @@ class OverlayWindowManager @Inject constructor(
             Timber.w("Overlay permission belum di-grant; bubble tidak ditampilkan")
             return
         }
-        if (composeView != null) {
-            Timber.d("Bubble sudah visible, skip")
-            return
-        }
+        if (bubbleView != null) return
 
         val owner = OverlayLifecycleOwner().apply { onCreate() }
-        lifecycleOwner = owner
+        bubbleLifecycleOwner = owner
 
         val params = WindowManager.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -79,7 +80,7 @@ class OverlayWindowManager @Inject constructor(
             x = INITIAL_X
             y = INITIAL_Y
         }
-        layoutParams = params
+        bubbleParams = params
 
         val view = ComposeView(context).apply {
             setViewTreeLifecycleOwner(owner)
@@ -92,19 +93,20 @@ class OverlayWindowManager @Inject constructor(
                 }
             }
         }
-        composeView = view
+        bubbleView = view
 
-        attachDragHandler(view, params)
-
+        attachBubbleTouchHandler(view, params)
         windowManager.addView(view, params)
+
         owner.onStart()
         owner.onResume()
-        Timber.i("Overlay bubble shown")
+        Timber.i("Overlay bubble shown at (${params.x},${params.y})")
     }
 
     fun hideBubble() {
-        val view = composeView ?: return
-        val owner = lifecycleOwner
+        if (expanded) collapsePanel()
+        val view = bubbleView ?: return
+        val owner = bubbleLifecycleOwner
 
         runCatching { windowManager.removeView(view) }
             .onFailure { Timber.w(it, "removeView failed (already removed?)") }
@@ -113,14 +115,93 @@ class OverlayWindowManager @Inject constructor(
         owner?.onStop()
         owner?.onDestroy()
 
-        composeView = null
-        lifecycleOwner = null
-        layoutParams = null
+        bubbleView = null
+        bubbleLifecycleOwner = null
+        bubbleParams = null
         Timber.i("Overlay bubble hidden")
     }
 
+    /** Tap bubble → toggle expanded chat panel. */
+    private fun togglePanel() {
+        if (expanded) {
+            collapsePanel()
+        } else {
+            expandPanel()
+        }
+    }
+
+    @SuppressLint("RtlHardcoded")
+    private fun expandPanel() {
+        if (panelView != null) return
+        val bubble = bubbleParams ?: return
+
+        val owner = OverlayLifecycleOwner().apply { onCreate() }
+        panelLifecycleOwner = owner
+
+        val params = WindowManager.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            overlayType(),
+            // Panel needs to be focusable supaya keyboard input bisa muncul
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.LEFT
+            val screenW = screenWidth()
+            x = if (bubble.x < screenW / 2) {
+                bubble.x + BUBBLE_SIZE_PX
+            } else {
+                (bubble.x - PANEL_WIDTH_PX).coerceAtLeast(0)
+            }
+            y = bubble.y.coerceAtMost(screenHeight() - PANEL_HEIGHT_PX)
+        }
+        panelParams = params
+
+        val view = ComposeView(context).apply {
+            setViewTreeLifecycleOwner(owner)
+            setViewTreeViewModelStoreOwner(owner)
+            setViewTreeSavedStateRegistryOwner(owner)
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                ChibiClawTheme(useDarkTheme = false) {
+                    OverlayChatPanel(
+                        conversationManager = conversationManager,
+                        taskRepository = taskRepository,
+                        onClose = { togglePanel() },
+                    )
+                }
+            }
+        }
+        panelView = view
+
+        windowManager.addView(view, params)
+        owner.onStart()
+        owner.onResume()
+        expanded = true
+        Timber.i("Overlay panel expanded")
+    }
+
+    private fun collapsePanel() {
+        val view = panelView ?: return
+        val owner = panelLifecycleOwner
+
+        runCatching { windowManager.removeView(view) }
+            .onFailure { Timber.w(it, "panel removeView failed") }
+
+        owner?.onPause()
+        owner?.onStop()
+        owner?.onDestroy()
+
+        panelView = null
+        panelLifecycleOwner = null
+        panelParams = null
+        expanded = false
+        Timber.i("Overlay panel collapsed")
+    }
+
     @SuppressLint("ClickableViewAccessibility")
-    private fun attachDragHandler(view: View, params: WindowManager.LayoutParams) {
+    private fun attachBubbleTouchHandler(view: View, params: WindowManager.LayoutParams) {
         var startX = 0
         var startY = 0
         var startRawX = 0f
@@ -141,16 +222,17 @@ class OverlayWindowManager @Inject constructor(
                     val dx = (event.rawX - startRawX).toInt()
                     val dy = (event.rawY - startRawY).toInt()
                     if (abs(dx) > TOUCH_SLOP || abs(dy) > TOUCH_SLOP) moved = true
-                    params.x = (startX + dx).coerceIn(0, screenWidth() - v.width)
-                    params.y = (startY + dy).coerceIn(0, screenHeight() - v.height)
-                    runCatching { windowManager.updateViewLayout(v, params) }
+                    if (!expanded) {
+                        params.x = (startX + dx).coerceIn(0, screenWidth() - v.width)
+                        params.y = (startY + dy).coerceIn(0, screenHeight() - v.height)
+                        runCatching { windowManager.updateViewLayout(v, params) }
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
                     if (!moved) {
-                        // Tap — Phase 1+ akan expand chat panel
-                        Timber.d("Bubble tapped (Phase 1+: expand panel)")
-                    } else {
+                        togglePanel()
+                    } else if (!expanded) {
                         snapToEdge(v, params)
                     }
                     true
@@ -181,5 +263,9 @@ class OverlayWindowManager @Inject constructor(
         private const val INITIAL_X = 60
         private const val INITIAL_Y = 240
         private const val TOUCH_SLOP = 10
+
+        private const val BUBBLE_SIZE_PX = 180   // 56dp ≈ 180px @ ~3x density
+        private const val PANEL_WIDTH_PX = 1100  // 360dp ≈ 1100px
+        private const val PANEL_HEIGHT_PX = 1600 // 520dp ≈ 1600px
     }
 }
