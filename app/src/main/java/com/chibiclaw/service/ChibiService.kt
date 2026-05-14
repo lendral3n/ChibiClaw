@@ -15,6 +15,7 @@ import com.chibiclaw.R
 import com.chibiclaw.agent.AgentRuntime
 import com.chibiclaw.agent.initiative.InitiativeEngine
 import com.chibiclaw.compliance.AuditLogger
+import com.chibiclaw.memory.miner.MemoryWorkScheduler
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.service.overlay.OverlayWindowManager
 import com.chibiclaw.ui.MainActivity
@@ -55,6 +56,7 @@ class ChibiService : Service() {
     @Inject lateinit var systemEventReceiver: SystemEventReceiver
     @Inject lateinit var notificationEventBridge: NotificationEventBridge
     @Inject lateinit var initiativeEngine: InitiativeEngine
+    @Inject lateinit var memoryWorkScheduler: MemoryWorkScheduler
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val binder = LocalBinder()
@@ -86,6 +88,9 @@ class ChibiService : Service() {
         systemEventReceiver.register()
         notificationEventBridge.start()
         initiativeEngine.start()
+
+        // Phase 7: schedule periodic memory workers (pattern miner + decay).
+        memoryWorkScheduler.schedule()
 
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STARTED,

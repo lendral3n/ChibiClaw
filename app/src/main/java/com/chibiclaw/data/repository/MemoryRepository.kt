@@ -1,6 +1,7 @@
 package com.chibiclaw.data.repository
 
 import com.chibiclaw.data.database.MemoryCategory
+import com.chibiclaw.data.database.MemoryCategoryCount
 import com.chibiclaw.data.database.MemoryDao
 import com.chibiclaw.data.database.MemoryRecordEntity
 import kotlinx.datetime.Clock
@@ -41,4 +42,12 @@ class MemoryRepository @Inject constructor(
 
     suspend fun listOldestAccessed(limit: Int): List<MemoryRecordEntity> =
         dao.listOldestAccessed(limit)
+
+    suspend fun listStaleSince(threshold: Instant): List<MemoryRecordEntity> =
+        dao.listStaleSince(threshold)
+
+    suspend fun deleteLowConfidenceStale(minConfidence: Float, threshold: Instant): Int =
+        dao.deleteLowConfidenceStale(minConfidence, threshold)
+
+    suspend fun countByCategory(): List<MemoryCategoryCount> = dao.countByCategory()
 }

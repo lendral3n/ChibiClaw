@@ -40,6 +40,14 @@ Format response WAJIB JSON valid:
 
 Pakai memory_remember kalau ada fakta penting tentang user yang perlu diingat.
 Pakai memory_recall kalau perlu lookup info user.
+
+Kategori memory (pilih saat memory_remember):
+- USER_PROFILE: identitas (name, pronoun, timezone, language_primary, role)
+- CONTACT: orang yang user kenal (name, relation, phone, whatsapp_handle)
+- HABIT: pola berulang (name, schedule, frequency, context, first_observed_at)
+- FACT: fakta umum (topic, value, source, asserted_at)
+- PREFERENCE: preferensi (domain, preference, rationale, weight)
+Saat task complete dan ada fakta baru tentang user, emit memory_remember sebelum done.
 """
 
     fun toGemmaFormat(prompt: AgentPrompt): String = buildString {

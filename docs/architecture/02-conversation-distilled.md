@@ -6,6 +6,81 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 7 Memory Maturity (CategoryTemplates + Workers + Inspector)
+
+**Durasi:** ~2 jam
+**Outcome:** Phase 7 selesai compile 100% W1 + 95% W2. 2 tools baru, MemoryInspectorScreen + 2 periodic workers (pattern miner + decay) wired. Build success 1m45s. Total tool catalog 24.
+
+### Topik Kunci
+- CategoryTemplates: schema validator + LLM prompt hint per kategori
+- memory_list_by_category tool + memory_infer_pattern tool
+- MemoryInspectorScreen (tabs per kategori + search + expand/collapse + delete)
+- PatternMinerWorker weekly aggregate hour-bucket → habit candidate
+- MemoryDecayWorker daily confidence decay + auto-forget + LRU evict
+- MemoryWorkScheduler enqueueUniquePeriodicWork KEEP policy
+- TaskRepository.recentSnapshot() helper untuk pattern miner snapshot
+- MemoryRepository extensions: listStaleSince, deleteLowConfidenceStale, countByCategory
+- PromptBuilder system prompt extension: kategori hints inline supaya LLM follow schema
+
+### Module yang Ditulis Phase 7
+**Memory core (4):**
+- `memory/categories/CategoryTemplates.kt` (5 template + validate + llmPromptHint)
+- `memory/miner/PatternMinerWorker.kt` (HiltWorker weekly)
+- `memory/miner/MemoryDecayWorker.kt` (HiltWorker daily)
+- `memory/miner/MemoryWorkScheduler.kt` (periodic enqueue)
+
+**Tools (2):**
+- `agent/tools/impl/MemoryListByCategoryTool.kt`
+- `agent/tools/impl/MemoryInferPatternTool.kt`
+
+**UI (1):**
+- `ui/memory/MemoryInspectorScreen.kt`
+
+**Wiring (8 modified):**
+- `data/database/TaskDao.kt` (+recentSnapshot, +listStaleSince, +deleteLowConfidenceStale, +countByCategory, +MemoryCategoryCount data class)
+- `data/repository/TaskRepository.kt` (+recentSnapshot)
+- `data/repository/MemoryRepository.kt` (+listStaleSince, +deleteLowConfidenceStale, +countByCategory)
+- `ai/llm/PromptBuilder.kt` system prompt kategori hints
+- `service/ChibiService.kt` (+inject MemoryWorkScheduler + schedule onStartCommand)
+- `di/ToolsModule.kt` (+memory_list_by_category, +memory_infer_pattern bindings)
+- `ui/MainActivity.kt` (+inject MemoryStore + NavHost memory/inspector)
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 1m 45s
+43 actionable tasks: 12 executed, 31 up-to-date
+```
+
+### Issue Encountered & Fixed
+1. `MemoryCategoryCount` data class harus di-define luar interface DAO (Room codegen tidak support inner type) — declare di file scope.
+2. `taskRepository.observeRecent` return Flow, butuh snapshot — tambah `recentSnapshot()` suspend method di Dao + Repo.
+
+### Keputusan di Session Ini
+- Memory analytics dashboard UI defer Phase 9 (repo helper sudah ready, layout polish kemudian)
+- bge-m3 migration utility defer Phase 9 (e5-small sudah cukup untuk personal use-case)
+- LLM-driven habit naming defer Phase 9 (Gemma call untuk natural-language label)
+- Pattern approval dialog dedicated UI defer Phase 9 (saat ini approve via inspector edit confidence atau biarkan TTL 90 hari expire)
+- FTS untuk inspector search defer Phase 9 (substring filter Kotlin-side cukup MVP)
+- Pin memory immune-to-decay flag defer Phase 9
+
+### Aksi Dilakukan
+- 8 file Kotlin baru + 7 file modified
+- `progress-audit-phase-7.md` ditulis lengkap
+
+### Open Items / Next
+- Commit Phase 7
+- Push manual
+- Phase 8 (Self-correction + parallel tasks + retry-with-different-tool) ready start
+
+### State Akhir Session
+- Build hijau, 24 tools advertised ke LLM total
+- Memory inspector live di NavHost
+- Pattern miner + decay scheduled periodic
+- LLM prompt include kategori hint supaya structured memory writes
+
+---
+
 ## Session 2026-05-14 — Phase 6 Initiative + Standing Instructions
 
 **Durasi:** ~2.5 jam

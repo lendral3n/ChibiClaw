@@ -49,6 +49,8 @@ class TaskRepository @Inject constructor(
 
     fun observeRecent(limit: Int = 50): Flow<List<TaskEntity>> = taskDao.observeRecent(limit)
 
+    suspend fun recentSnapshot(limit: Int = 200): List<TaskEntity> = taskDao.recentSnapshot(limit)
+
     suspend fun runnable(limit: Int = 5): List<TaskEntity> = taskDao.runnable(limit)
 
     suspend fun listIncomplete(): List<TaskEntity> = taskDao.listIncomplete()

@@ -31,6 +31,7 @@ import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.permissions.ShizukuManager
 import com.chibiclaw.service.ChibiService
 import com.chibiclaw.agent.initiative.trigger.CronParser
+import com.chibiclaw.memory.MemoryStore
 import com.chibiclaw.ai.llm.AdapterQuotaTracker
 import com.chibiclaw.ai.llm.InferenceRouter
 import com.chibiclaw.ai.llm.adapters.CloudSessionRotator
@@ -40,6 +41,7 @@ import com.chibiclaw.ui.debug.TaskDetailScreen
 import com.chibiclaw.ui.debug.TaskListScreen
 import com.chibiclaw.ui.initiative.StandingInstructionEditorScreen
 import com.chibiclaw.ui.initiative.StandingInstructionListScreen
+import com.chibiclaw.ui.memory.MemoryInspectorScreen
 import com.chibiclaw.ui.settings.AiEngineSettingsScreen
 import com.chibiclaw.ui.setup.SetupNavigator
 import com.chibiclaw.vision.projection.ProjectionTokenStore
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var projectionTokenStore: ProjectionTokenStore
     @Inject lateinit var standingInstructionRepo: StandingInstructionRepository
     @Inject lateinit var cronParser: CronParser
+    @Inject lateinit var memoryStore: MemoryStore
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -96,6 +99,7 @@ class MainActivity : ComponentActivity() {
                                 sessionExtractor = sessionExtractor,
                                 standingInstructionRepo = standingInstructionRepo,
                                 cronParser = cronParser,
+                                memoryStore = memoryStore,
                             )
                         } else {
                             SetupNavigator(
@@ -139,6 +143,7 @@ private fun HomeNavigation(
     sessionExtractor: SessionExtractor,
     standingInstructionRepo: StandingInstructionRepository,
     cronParser: CronParser,
+    memoryStore: MemoryStore,
 ) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "chat") {
@@ -177,6 +182,9 @@ private fun HomeNavigation(
                 onDone = { navController.popBackStack("initiative/list", inclusive = false) },
                 onCancel = { navController.popBackStack() },
             )
+        }
+        composable("memory/inspector") {
+            MemoryInspectorScreen(memoryStore = memoryStore)
         }
     }
 }

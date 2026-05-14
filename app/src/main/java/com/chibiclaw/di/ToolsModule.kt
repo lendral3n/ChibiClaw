@@ -9,6 +9,8 @@ import com.chibiclaw.agent.tools.impl.AwaitUserTool
 import com.chibiclaw.agent.tools.impl.EscalateToolHandler
 import com.chibiclaw.agent.tools.impl.IntentOpenTool
 import com.chibiclaw.agent.tools.impl.IntentSendTool
+import com.chibiclaw.agent.tools.impl.MemoryInferPatternTool
+import com.chibiclaw.agent.tools.impl.MemoryListByCategoryTool
 import com.chibiclaw.agent.tools.impl.MemoryRecallTool
 import com.chibiclaw.agent.tools.impl.MemoryRememberTool
 import com.chibiclaw.agent.tools.impl.MessagingTool
@@ -101,6 +103,13 @@ abstract class ToolsModule {
     // ── Phase 4: Cloud escalation ───────────────────────────────────────────
     @Binds @IntoMap @StringKey("escalate_to_cloud")
     abstract fun bindEscalateToolHandler(impl: EscalateToolHandler): Tool
+
+    // ── Phase 7: Memory maturity ────────────────────────────────────────────
+    @Binds @IntoMap @StringKey("memory_list_by_category")
+    abstract fun bindMemoryListByCategoryTool(impl: MemoryListByCategoryTool): Tool
+
+    @Binds @IntoMap @StringKey("memory_infer_pattern")
+    abstract fun bindMemoryInferPatternTool(impl: MemoryInferPatternTool): Tool
 
     // ── Phase 5: Vision tools ───────────────────────────────────────────────
     @Binds @IntoMap @StringKey("vision_tap")

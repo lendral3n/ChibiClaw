@@ -44,6 +44,9 @@ interface TaskDao {
     @Query("SELECT * FROM task ORDER BY created_at DESC LIMIT :limit")
     fun observeRecent(limit: Int = 50): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM task ORDER BY created_at DESC LIMIT :limit")
+    suspend fun recentSnapshot(limit: Int = 200): List<TaskEntity>
+
     @Query("SELECT * FROM task WHERE status = 'PENDING' ORDER BY priority DESC, created_at ASC LIMIT :limit")
     suspend fun runnable(limit: Int = 5): List<TaskEntity>
 
@@ -108,4 +111,18 @@ interface MemoryDao {
 
     @Query("SELECT * FROM memory_record ORDER BY last_accessed_at ASC LIMIT :limit")
     suspend fun listOldestAccessed(limit: Int): List<MemoryRecordEntity>
+
+    @Query("SELECT * FROM memory_record WHERE last_accessed_at < :threshold")
+    suspend fun listStaleSince(threshold: Instant): List<MemoryRecordEntity>
+
+    @Query("DELETE FROM memory_record WHERE confidence < :minConfidence AND last_accessed_at < :threshold")
+    suspend fun deleteLowConfidenceStale(minConfidence: Float, threshold: Instant): Int
+
+    @Query("SELECT category, COUNT(*) as cnt FROM memory_record GROUP BY category")
+    suspend fun countByCategory(): List<MemoryCategoryCount>
 }
+
+data class MemoryCategoryCount(
+    val category: MemoryCategory,
+    val cnt: Int,
+)

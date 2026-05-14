@@ -21,9 +21,9 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-14 session "Phase 6 Initiative + Standing Instructions"
+**Update terakhir:** 2026-05-14 session "Phase 7 Memory Maturity (CategoryTemplates + Workers + Inspector)"
 
-**Phase aktif:** Phase 6 selesai compile (100% core, 90% UI). Phase 7 ready untuk start.
+**Phase aktif:** Phase 7 selesai compile (100% W1, 95% W2). Phase 8 ready untuk start.
 
 **Phase Status Summary:**
 - **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
@@ -32,7 +32,8 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Commit `86557c6`.
 - **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Commit `1d993de`.
 - **Phase 5** (Vision): ✅ Compile DONE (100% W1–W3). Commit `dffee13`.
-- **Phase 6** (Initiative + Standing): ✅ Compile DONE (100% W1+W2, 90% W3 UI). Belum committed.
+- **Phase 6** (Initiative + Standing): ✅ Compile DONE (100% core, 90% UI). Commit `dbc242e`.
+- **Phase 7** (Memory Maturity): ✅ Compile DONE (100% W1, 95% W2). Belum committed.
 
 **Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
 **Build:** sukses 54 detik (warm post-Phase3), APK debug
@@ -43,13 +44,13 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
 
 **Working tree:**
-- Phase 6 files: 13 baru (StandingInstructionEntity, StandingInstructionDao, StandingInstructionRepository, EventBus, InitiativeEngine, ComplexTrigger, TriggerEvaluator, CronParser, SimplePredicateEvaluator, TemplateRenderer, SystemEventReceiver, NotificationEventBridge, StandingInstructionListScreen, StandingInstructionEditorScreen, progress-audit-phase-6.md) + 8 modified (build.gradle.kts enable cron-utils, AppDatabase v3→v4, AppModule provideStandingInstructionDao, SafetyGate pre-auth path, ChibiService lifecycle wiring, MainActivity inject + NavHost routes, plus distilled + handover docs)
-- Git: HEAD = `dffee13` (Phase 5 commit). Lendra sudah push manual sampai sini.
+- Phase 7 files: 8 baru (CategoryTemplates, PatternMinerWorker, MemoryDecayWorker, MemoryWorkScheduler, MemoryListByCategoryTool, MemoryInferPatternTool, MemoryInspectorScreen, progress-audit-phase-7.md) + 7 modified (TaskDao + MemoryCategoryCount, TaskRepository recentSnapshot, MemoryRepository extensions, PromptBuilder kategori hints, ChibiService scheduler, ToolsModule bindings, MainActivity inject + NavHost)
+- Git: HEAD = `dbc242e` (Phase 6 commit). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 6 ke git lokal
+1. Commit Phase 7 ke git lokal
 2. Lendra push manual lagi
-3. **Phase 7 (Memory mature: KB query + pattern detection)** ready start
+3. **Phase 8 (Self-correction + parallel tasks + retry-with-different-tool)** ready start
 4. Sub-milestone Phase 1+2+5 paralel kapan saja (push model files + enable deps optional)
 
 **CI/CD Behavior Baru:**
@@ -60,7 +61,8 @@ Detail Phase 3 audit: [progress-audit-phase-3.md](progress-audit-phase-3.md).
 Detail Phase 4 audit: [progress-audit-phase-4.md](progress-audit-phase-4.md).
 Detail Phase 5 audit: [progress-audit-phase-5.md](progress-audit-phase-5.md).
 Detail Phase 6 audit: [progress-audit-phase-6.md](progress-audit-phase-6.md).
-Detail Phase 7: [28-phase-7-memory.md](28-phase-7-memory.md).
+Detail Phase 7 audit: [progress-audit-phase-7.md](progress-audit-phase-7.md).
+Detail Phase 8: [29-phase-8-self-correction.md](29-phase-8-self-correction.md).
 
 ---
 
