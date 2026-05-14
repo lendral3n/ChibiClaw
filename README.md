@@ -155,18 +155,40 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ### 2. Push Model Files (optional, untuk runtime functional)
 
-```bash
-# Gemma 4 4B local (~2.5 GB)
-adb push gemma-4-4b-q4.task /data/local/tmp/
-adb shell run-as com.chibiclaw mkdir -p files/models
-adb shell run-as com.chibiclaw cp /data/local/tmp/gemma-4-4b-q4.task files/models/
+**Model sources (semua open-access, no auth):**
 
-# Multilingual E5 small embedding (~120 MB)
-adb push e5_small_q8.onnx /data/local/tmp/
+| Model | HF Repo | File | Size |
+| --- | --- | --- | --- |
+| **Gemma 4 E4B** | `litert-community/gemma-4-E4B-it-litert-lm` | `gemma-4-E4B-it-web.task` | ~2.96 GB |
+| **multilingual-e5-small** | `intfloat/multilingual-e5-small` | `onnx/model_qint8_avx512_vnni.onnx` | ~118 MB |
+| **Whisper small INT8** | `csukuangfj/sherpa-onnx-whisper-small` | encoder + decoder INT8 | ~357 MB |
+| **RoBERTa go-emotions** | `SamLowe/roberta-base-go_emotions-onnx` | `onnx/model_quantized.onnx` | ~125 MB |
+
+**Total ~3.6 GB.** Download via curl atau pakai script:
+
+```bash
+# Download semua (Gemma 4 + embedding + Whisper + RoBERTa) — no HF auth
+mkdir -p ~/Downloads/chibiclaw-models && cd ~/Downloads/chibiclaw-models
+
+# Gemma 4 E4B (essential)
+curl -L -o gemma-4-4b-q4.task \
+    "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it-web.task"
+
+# E5-small embedding + tokenizer (essential)
+mkdir -p e5-small && curl -L -o e5-small/model.onnx \
+    "https://huggingface.co/intfloat/multilingual-e5-small/resolve/main/onnx/model_qint8_avx512_vnni.onnx"
+curl -L -o e5-small/tokenizer.json \
+    "https://huggingface.co/intfloat/multilingual-e5-small/resolve/main/onnx/tokenizer.json"
+
+# Push ke device
+adb shell run-as com.chibiclaw mkdir -p files/models
+adb push gemma-4-4b-q4.task /data/local/tmp/
+adb shell run-as com.chibiclaw cp /data/local/tmp/gemma-4-4b-q4.task files/models/
+adb push e5-small/model.onnx /data/local/tmp/e5_small_q8.onnx
 adb shell run-as com.chibiclaw cp /data/local/tmp/e5_small_q8.onnx files/models/
 ```
 
-Tanpa model file, adapter cascade fallback ke Stub adapter (rule-based echo) — semua tool tetap callable manual via overlay chat panel.
+Tanpa model file, adapter cascade fallback ke Stub adapter (rule-based echo) — semua tool tetap callable manual via overlay chat panel + cloud adapter (Gemini API key di `local.properties`) tetap jalan.
 
 ### 3. Setup Wizard (10 step)
 

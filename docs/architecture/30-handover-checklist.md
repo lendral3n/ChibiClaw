@@ -41,12 +41,12 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 **Build:** sukses 2m23s cold / 8s incremental cache. APK debug.
 
 **Reflection-based components** (code-complete, runtime butuh asset push):
-- GemmaAdapter (gemma-4-4b-q4.task ~2.5GB)
-- EmbeddingProvider (e5_small_q8.onnx ~120MB)
-- WhisperStt (sherpa-onnx-whisper bundle ~150MB)
-- Wav2SmallEmotion (wav2small.onnx ~120KB)
-- TextEmotionClassifier (roberta_goemotions_q8.onnx ~125MB)
-- MiniCPMVInference (LlamaCppMm JNI .so + 2 gguf ~800MB) — bisa skip pakai Gemini multimodal
+- GemmaAdapter: Gemma 4 E4B `.task` ~2.96 GB → `litert-community/gemma-4-E4B-it-litert-lm` (open, no auth) → rename ke `gemma-4-4b-q4.task` at push time
+- EmbeddingProvider: e5-small INT8 ~118 MB → `intfloat/multilingual-e5-small` onnx/model_qint8_avx512_vnni.onnx
+- WhisperStt: encoder+decoder INT8 ~357 MB → `csukuangfj/sherpa-onnx-whisper-small`
+- Wav2SmallEmotion: wav2small ONNX ~120KB — ONNX version NOT available, audeering hanya kasih safetensors → skip (text-emotion via RoBERTa cukup MVP)
+- TextEmotionClassifier: roberta-go-emotions quantized ~125MB → `SamLowe/roberta-base-go_emotions-onnx`
+- MiniCPMVInference: butuh LlamaCppMm JNI .so custom build → skip MVP, rely Gemini multimodal (already wired Phase 9)
 
 **Working tree (Phase 9):**
 - 6 file baru: HomeDashboardScreen, NetworkObserver, AppLaunchDetector, CalendarEventObserver, GeofenceManager + Receiver, progress-audit-phase-9.md
@@ -56,13 +56,13 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 **Apa yang Lendra perlu siapkan untuk RUNTIME functional:**
 
-1. **Asset files** (push via adb, total ~3-4 GB):
-   - `gemma-4-4b-q4.task` (essential, ~2.5 GB) → Google AI Edge / HF
-   - `e5_small_q8.onnx` + tokenizer (essential, ~120 MB) → HF intfloat/multilingual-e5-small
-   - Whisper sherpa-onnx bundle (opsional voice, ~150 MB)
-   - `wav2small.onnx` (opsional emotion, ~120 KB)
-   - `roberta_goemotions_q8.onnx` + tokenizer (opsional, ~125 MB)
-   - MiniCPM-V (opsional vision, ~800 MB + custom JNI .so)
+1. **Asset files** (push via adb, total ~3.5 GB) — semua **open-access** kecuali Gemma yang gated (E4B di litert-community OPEN):
+   - **Gemma 4 E4B** (essential, ~2.96 GB) → `litert-community/gemma-4-E4B-it-litert-lm` (no HF auth needed)
+   - **multilingual-e5-small INT8** (essential, ~118 MB) → `intfloat/multilingual-e5-small` onnx/model_qint8_avx512_vnni.onnx
+   - **Whisper small INT8 multilingual** (opsional voice, ~357 MB) → `csukuangfj/sherpa-onnx-whisper-small`
+   - **wav2small** (opsional audio emotion) — TIDAK ada ONNX version, defer text-emotion saja
+   - **roberta-go-emotions** (opsional text emotion, ~125 MB) → `SamLowe/roberta-base-go_emotions-onnx`
+   - **MiniCPM-V** (vision) — defer Phase 10 (butuh custom JNI .so), MVP rely Gemini multimodal
 
 2. **API keys / sessions** (setup wizard):
    - Gemini API key (free) — `aistudio.google.com/apikey`
