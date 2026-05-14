@@ -38,6 +38,7 @@ import com.chibiclaw.ui.debug.TaskDetailScreen
 import com.chibiclaw.ui.debug.TaskListScreen
 import com.chibiclaw.ui.settings.AiEngineSettingsScreen
 import com.chibiclaw.ui.setup.SetupNavigator
+import com.chibiclaw.vision.projection.ProjectionTokenStore
 import com.chibiclaw.ui.theme.ChibiClawTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -61,6 +62,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var router: InferenceRouter
     @Inject lateinit var quotaTracker: AdapterQuotaTracker
     @Inject lateinit var sessionRotator: CloudSessionRotator
+    @Inject lateinit var projectionTokenStore: ProjectionTokenStore
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -92,6 +94,7 @@ class MainActivity : ComponentActivity() {
                                 shizukuManager = shizukuManager,
                                 securePreferences = securePreferences,
                                 sessionExtractor = sessionExtractor,
+                                projectionTokenStore = projectionTokenStore,
                                 onRequestOverlayPermission = { requestOverlayPermission() },
                                 onSetupComplete = {
                                     securePreferences.setSetupComplete(true)

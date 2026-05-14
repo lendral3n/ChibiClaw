@@ -16,8 +16,14 @@ import com.chibiclaw.agent.tools.impl.ShizukuExecTool
 import com.chibiclaw.agent.tools.impl.ShizukuForceStopTool
 import com.chibiclaw.agent.tools.impl.ShizukuGrantPermissionTool
 import com.chibiclaw.agent.tools.impl.SystemActionTool
+import com.chibiclaw.agent.tools.impl.VisionDescribeTool
+import com.chibiclaw.agent.tools.impl.VisionExtractTextTool
+import com.chibiclaw.agent.tools.impl.VisionTapTool
 import com.chibiclaw.agent.tools.impl.WaitTool
+import com.chibiclaw.agent.tools.impl.WorldGetInstalledAppsTool
+import com.chibiclaw.agent.tools.impl.WorldGetLocationTool
 import com.chibiclaw.agent.tools.impl.WorldGetNotificationsTool
+import com.chibiclaw.agent.tools.impl.WorldGetScheduleTool
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -95,4 +101,24 @@ abstract class ToolsModule {
     // ── Phase 4: Cloud escalation ───────────────────────────────────────────
     @Binds @IntoMap @StringKey("escalate_to_cloud")
     abstract fun bindEscalateToolHandler(impl: EscalateToolHandler): Tool
+
+    // ── Phase 5: Vision tools ───────────────────────────────────────────────
+    @Binds @IntoMap @StringKey("vision_tap")
+    abstract fun bindVisionTapTool(impl: VisionTapTool): Tool
+
+    @Binds @IntoMap @StringKey("vision_describe")
+    abstract fun bindVisionDescribeTool(impl: VisionDescribeTool): Tool
+
+    @Binds @IntoMap @StringKey("vision_extract_text")
+    abstract fun bindVisionExtractTextTool(impl: VisionExtractTextTool): Tool
+
+    // ── Phase 5: World query ────────────────────────────────────────────────
+    @Binds @IntoMap @StringKey("world_get_installed_apps")
+    abstract fun bindWorldGetInstalledAppsTool(impl: WorldGetInstalledAppsTool): Tool
+
+    @Binds @IntoMap @StringKey("world_get_location")
+    abstract fun bindWorldGetLocationTool(impl: WorldGetLocationTool): Tool
+
+    @Binds @IntoMap @StringKey("world_get_schedule")
+    abstract fun bindWorldGetScheduleTool(impl: WorldGetScheduleTool): Tool
 }

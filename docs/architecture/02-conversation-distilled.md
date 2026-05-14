@@ -6,6 +6,84 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 5 Vision (MediaProjection + MiniCPM-V + OCR + 6 tools)
+
+**Durasi:** ~2.5 jam
+**Outcome:** Phase 5 selesai compile 100%. Vision pipeline + 6 tools baru registered. Setup wizard 10-step. Build success 1m24s.
+
+### Topik Kunci
+- MediaProjection permission once-off + persistent token via Parcel marshalling
+- ChibiProjectionManager: VirtualDisplay + ImageReader, suspend captureBitmap
+- ScreenCapture: 1s frame cache reuse across multi-tool window
+- MiniCPM-V 4.6 reflection binding ke `com.chibiclaw.nativellm.LlamaCppMm`
+- ML Kit Text Recognition v2 untuk OCR fast-path
+- VisionPromptBuilder grounding/describe/extractText
+- 6 tools: vision_tap, vision_describe, vision_extract_text, world_get_installed_apps, world_get_location, world_get_schedule
+- Setup wizard tambah VisionSetupScreen (10-step total)
+- ChibiService FGS type mask include mediaProjection saat hasToken
+
+### Module yang Ditulis Phase 5
+**Vision pipeline (8):**
+- `vision/projection/ProjectionTokenStore.kt`
+- `vision/projection/MediaProjectionPermissionActivity.kt` (translucent AndroidEntryPoint)
+- `vision/projection/ChibiProjectionManager.kt` (VirtualDisplay + ImageReader)
+- `vision/screenshot/ImageProcessor.kt` (resize/crop/JPEG)
+- `vision/screenshot/ScreenCapture.kt` (1s cache)
+- `vision/llm/VisionPromptBuilder.kt`
+- `vision/llm/MiniCPMVInference.kt` (reflection LlamaCppMm)
+- `vision/ocr/MlKitOcr.kt` (ML Kit Text Recognition v2)
+
+**Tools (6):**
+- `VisionTapTool`, `VisionDescribeTool`, `VisionExtractTextTool`
+- `WorldGetInstalledAppsTool`, `WorldGetLocationTool`, `WorldGetScheduleTool`
+
+**UI (1):**
+- `ui/setup/VisionSetupScreen.kt`
+
+**Wiring (5 modified):**
+- `app/build.gradle.kts` (enable mlkit + play-services-location)
+- `app/src/main/AndroidManifest.xml` (MediaProjectionPermissionActivity entry + FGS mediaProjection)
+- `service/ChibiService.kt` (inject ChibiProjectionManager, recreate on start, teardown on destroy)
+- `di/ToolsModule.kt` (6 new tool bindings)
+- `ui/setup/SetupNavigator.kt` (+ VISION_SETUP step)
+- `ui/MainActivity.kt` (inject ProjectionTokenStore + pass ke navigator)
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 1m 24s
+43 actionable tasks: 13 executed, 30 up-to-date
+```
+
+### Issue Encountered & Fixed
+1. `MediaProjectionManager.getMediaProjection()` returns nullable di newer SDK — Android 14+ API change. Fix: `?: error(...)` guard di tryRecreate.
+2. `kotlinx.coroutines.sync.Mutex.withLock { suspend body returning String? }` blocks Hilt KSP resolver (`InjectProcessingStep was unable to process 'MiniCPMVInference'`). Workaround: `@Volatile` + `withContext(IO)` saja. Single-caller path dari ToolDispatcher tidak butuh mutex.
+3. Initial debugging masked by KSP — Kotlin compile errors di ChibiProjectionManager line 77 hanya muncul setelah strip MiniCPMVInference ke stub minimal.
+
+### Keputusan di Session Ini
+- MiniCPM-V .so + model defer Phase 9 (runtime download / lazy)
+- Cloud vision fallback (GeminiFreeAdapter image multimodal payload) defer Phase 9
+- Cina/Korea/Jepang OCR scripts defer Phase 9
+- Keyboard-active screenshot guard defer Phase 9 (privacy on password fields)
+- Vision tools advertised LOW/MEDIUM severity — full HP access design
+
+### Aksi Dilakukan
+- 14 file Kotlin baru + 6 modified
+- `progress-audit-phase-5.md` ditulis lengkap
+
+### Open Items / Next
+- Commit Phase 5
+- Push manual
+- Phase 6 (Initiative + StandingInstruction + cron-like triggers) ready start
+
+### State Akhir Session
+- Build hijau, 22 tools advertised ke LLM total
+- Setup wizard 10-step lengkap
+- Vision pipeline graceful fallback saat token/model absent
+- MediaProjection FGS type include kalau token tersedia
+
+---
+
 ## Session 2026-05-14 — Phase 4 Cloud Escalation (Gemini + Claude/GPT web reverse + Router cascade)
 
 **Durasi:** ~3 jam

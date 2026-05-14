@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import com.chibiclaw.ai.llm.webview.SessionExtractor
 import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.permissions.ShizukuManager
+import com.chibiclaw.vision.projection.ProjectionTokenStore
 
 /**
  * Setup wizard navigator.
@@ -30,6 +31,7 @@ fun SetupNavigator(
     shizukuManager: ShizukuManager,
     securePreferences: SecurePreferences,
     sessionExtractor: SessionExtractor,
+    projectionTokenStore: ProjectionTokenStore,
     onRequestOverlayPermission: () -> Unit,
     onSetupComplete: () -> Unit,
 ) {
@@ -76,6 +78,12 @@ fun SetupNavigator(
 
         SetupStep.GPT_WEB_SETUP -> GPTWebSetupScreen(
             sessionExtractor = sessionExtractor,
+            onContinue = { step = SetupStep.VISION_SETUP },
+            onSkip = { step = SetupStep.VISION_SETUP },
+        )
+
+        SetupStep.VISION_SETUP -> VisionSetupScreen(
+            tokenStore = projectionTokenStore,
             onContinue = { step = SetupStep.DONE },
             onSkip = { step = SetupStep.DONE },
         )
@@ -96,5 +104,6 @@ enum class SetupStep {
     GEMINI_SETUP,
     CLAUDE_WEB_SETUP,
     GPT_WEB_SETUP,
+    VISION_SETUP,
     DONE,
 }

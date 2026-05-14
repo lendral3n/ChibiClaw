@@ -17,6 +17,7 @@ import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.service.overlay.OverlayWindowManager
 import com.chibiclaw.ui.MainActivity
+import com.chibiclaw.vision.projection.ChibiProjectionManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,7 @@ class ChibiService : Service() {
     @Inject lateinit var overlayWindowManager: OverlayWindowManager
     @Inject lateinit var auditLogger: AuditLogger
     @Inject lateinit var agentRuntime: AgentRuntime
+    @Inject lateinit var projectionManager: ChibiProjectionManager
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val binder = LocalBinder()
@@ -67,6 +69,14 @@ class ChibiService : Service() {
         startForegroundWithType()
         overlayWindowManager.showBubble()
         agentRuntime.start()
+
+        // Phase 5: recreate MediaProjection dari saved token kalau ada.
+        // Aman kalau gagal — vision tools akan return NOT_AVAILABLE saat dipakai.
+        if (projectionManager.hasToken()) {
+            val ok = projectionManager.tryRecreate()
+            Timber.i("MediaProjection recreate on service start: $ok")
+        }
+
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STARTED,
             dataSummary = "ChibiService foreground started, AgentRuntime active",
@@ -81,6 +91,7 @@ class ChibiService : Service() {
         Timber.i("ChibiService.onDestroy()")
         agentRuntime.stop()
         overlayWindowManager.hideBubble()
+        projectionManager.teardown()
         scope.cancel()
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STOPPED,
@@ -94,10 +105,15 @@ class ChibiService : Service() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             // Android 14+ wajib spec foregroundServiceType di runtime.
-            // Bitmask combo: microphone (Phase 2 voice) + specialUse (agent backend).
-            // Phase 5 akan tambah MEDIA_PROJECTION saat vision tools live.
-            val typeMask = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+            // Bitmask: microphone (voice) | specialUse (agent backend) | mediaProjection (vision screen capture).
+            // MEDIA_PROJECTION hanya kalau token tersedia — Android 15+ strict: tipe tidak boleh
+            // di-claim tanpa active session. Selalu include kalau token ready supaya foreground
+            // promotion lulus saat first capture.
+            var typeMask = ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            if (projectionManager.hasToken()) {
+                typeMask = typeMask or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            }
             startForeground(NOTIFICATION_ID, notification, typeMask)
         } else {
             startForeground(NOTIFICATION_ID, notification)

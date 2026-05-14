@@ -146,17 +146,9 @@ dependencies {
     implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
     implementation(libs.onnxruntime.android)
 
-    // ===========================================================
-    // Berikut akan di-aktifkan di phase selanjutnya. Sengaja keep
-    // commented supaya build Phase 1 tidak unduh extra dep yang belum dipakai.
-    // ===========================================================
-    // Phase 3: Shizuku
-    // implementation(libs.shizuku.api)
-    // implementation(libs.shizuku.provider)
-
-    // Phase 5: ML Kit OCR + Play Services Location
-    // implementation(libs.mlkit.text.recognition)
-    // implementation(libs.play.services.location)
+    // Phase 5: ML Kit OCR + Play Services Location (vision tools + world_get_location)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.play.services.location)
 
     // Phase 6: cron-utils (standing instruction time trigger)
     // implementation(libs.cron.utils)

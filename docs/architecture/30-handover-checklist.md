@@ -21,16 +21,17 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-14 session "Phase 4 Cloud Escalation (Gemini + Claude/GPT web + Router cascade)"
+**Update terakhir:** 2026-05-14 session "Phase 5 Vision (MediaProjection + MiniCPM-V + OCR + 6 tools)"
 
-**Phase aktif:** Phase 4 selesai compile (100%). Phase 5 ready untuk start.
+**Phase aktif:** Phase 5 selesai compile (100%). Phase 6 ready untuk start.
 
 **Phase Status Summary:**
 - **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
 - **Phase 1** (Agent Core): ✅ Compile DONE (85%). Commit `8f6547c` + `fb9355a`.
 - **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Commit `c577d33`.
 - **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Commit `86557c6`.
-- **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Belum committed.
+- **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Commit `1d993de`.
+- **Phase 5** (Vision): ✅ Compile DONE (100% W1–W3). Belum committed.
 
 **Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
 **Build:** sukses 54 detik (warm post-Phase3), APK debug
@@ -41,14 +42,14 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
 
 **Working tree:**
-- Phase 4 files: 13 baru (GeminiFreeAdapter, ClaudeWebAdapter, GPTWebAdapter, CloudSessionRotator, InferenceRouter refactor, CloudSession, CloudLoginWebView, SessionExtractor, ModelConfigEntity, ModelConfigDao, AdapterQuotaTracker, EscalateToolHandler, GeminiSetupScreen, ClaudeWebSetupScreen, AiEngineSettingsScreen, progress-audit-phase-4.md) + 7 modified (AppDatabase v3, AppModule, ToolDispatcher __taskId stamp, ToolsModule, SetupNavigator, MainActivity, InferenceRouter)
-- Git: HEAD = `86557c6` (Phase 3 commit). Lendra sudah push manual sampai sini.
+- Phase 5 files: 14 baru (ProjectionTokenStore, MediaProjectionPermissionActivity, ChibiProjectionManager, ImageProcessor, ScreenCapture, VisionPromptBuilder, MiniCPMVInference, MlKitOcr, 3 vision tools, 3 world tools, VisionSetupScreen, progress-audit-phase-5.md) + 6 modified (build.gradle.kts enable ML Kit+location, AndroidManifest MediaProjection activity + FGS mediaProjection, ChibiService inject + recreate + teardown, ToolsModule 6 new bindings, SetupNavigator + VISION_SETUP step, MainActivity inject ProjectionTokenStore)
+- Git: HEAD = `1d993de` (Phase 4 commit). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 4 ke git lokal
+1. Commit Phase 5 ke git lokal
 2. Lendra push manual lagi
-3. **Phase 5 (Vision: MediaProjection + OCR + screen_describe)** ready start
-4. Sub-milestone Phase 1+2 paralel kapan saja (push model files + enable deps optional)
+3. **Phase 6 (Initiative + StandingInstruction + cron-like triggers)** ready start
+4. Sub-milestone Phase 1+2+5 paralel kapan saja (push model files + enable deps optional)
 
 **CI/CD Behavior Baru:**
 - Push ke main → `ci.yml` build debug verify (no APK upload)
@@ -56,7 +57,8 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 Detail Phase 3 audit: [progress-audit-phase-3.md](progress-audit-phase-3.md).
 Detail Phase 4 audit: [progress-audit-phase-4.md](progress-audit-phase-4.md).
-Detail Phase 5: [26-phase-5-vision.md](26-phase-5-vision.md).
+Detail Phase 5 audit: [progress-audit-phase-5.md](progress-audit-phase-5.md).
+Detail Phase 6: [27-phase-6-initiative.md](27-phase-6-initiative.md).
 
 ---
 

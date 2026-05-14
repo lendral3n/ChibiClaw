@@ -87,16 +87,24 @@
             </intent-filter>
         </activity>
 
-        <!-- ChibiService — Foreground Service utama (overlay + agent runtime + voice) -->
+        <!-- ChibiService — Foreground Service utama (overlay + agent runtime + voice + vision) -->
         <service
             android:name=".service.ChibiService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="microphone|specialUse">
+            android:foregroundServiceType="microphone|specialUse|mediaProjection">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="ChibiClaw AI agent — runs in background, overlay bubble + voice command + persistent task execution. Phase 5 akan tambah mediaProjection." />
+                android:value="ChibiClaw AI agent — runs in background, overlay bubble + voice command + persistent task execution + screen capture fallback." />
         </service>
+
+        <!-- MediaProjectionPermissionActivity — translucent activity to request screen capture token -->
+        <activity
+            android:name=".vision.projection.MediaProjectionPermissionActivity"
+            android:enabled="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true" />
 
         <!-- Boot Receiver — auto-restart ChibiService setelah reboot -->
         <receiver
