@@ -151,6 +151,9 @@ dependencies {
     implementation(libs.play.services.location)
 
     // Phase 6: cron-utils (standing instruction time trigger)
+    implementation(libs.cron.utils)
+
+    // Phase 6: cron-utils (standing instruction time trigger)
     // implementation(libs.cron.utils)
 
     // Testing (Phase 9 manual; minimal stubs untuk Hilt compile)

@@ -6,6 +6,7 @@ import com.chibiclaw.data.database.AppDatabase
 import com.chibiclaw.data.database.AuditDao
 import com.chibiclaw.data.database.MemoryDao
 import com.chibiclaw.data.database.ModelConfigDao
+import com.chibiclaw.data.database.StandingInstructionDao
 import com.chibiclaw.data.database.TaskDao
 import dagger.Module
 import dagger.Provides
@@ -42,4 +43,8 @@ object AppModule {
 
     @Provides
     fun provideModelConfigDao(db: AppDatabase): ModelConfigDao = db.modelConfigDao()
+
+    @Provides
+    fun provideStandingInstructionDao(db: AppDatabase): StandingInstructionDao =
+        db.standingInstructionDao()
 }

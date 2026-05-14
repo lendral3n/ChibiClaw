@@ -13,11 +13,14 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.chibiclaw.R
 import com.chibiclaw.agent.AgentRuntime
+import com.chibiclaw.agent.initiative.InitiativeEngine
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.service.overlay.OverlayWindowManager
 import com.chibiclaw.ui.MainActivity
 import com.chibiclaw.vision.projection.ChibiProjectionManager
+import com.chibiclaw.world.observers.NotificationEventBridge
+import com.chibiclaw.world.observers.SystemEventReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +52,9 @@ class ChibiService : Service() {
     @Inject lateinit var auditLogger: AuditLogger
     @Inject lateinit var agentRuntime: AgentRuntime
     @Inject lateinit var projectionManager: ChibiProjectionManager
+    @Inject lateinit var systemEventReceiver: SystemEventReceiver
+    @Inject lateinit var notificationEventBridge: NotificationEventBridge
+    @Inject lateinit var initiativeEngine: InitiativeEngine
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val binder = LocalBinder()
@@ -71,15 +77,19 @@ class ChibiService : Service() {
         agentRuntime.start()
 
         // Phase 5: recreate MediaProjection dari saved token kalau ada.
-        // Aman kalau gagal — vision tools akan return NOT_AVAILABLE saat dipakai.
         if (projectionManager.hasToken()) {
             val ok = projectionManager.tryRecreate()
             Timber.i("MediaProjection recreate on service start: $ok")
         }
 
+        // Phase 6: event sources + InitiativeEngine.
+        systemEventReceiver.register()
+        notificationEventBridge.start()
+        initiativeEngine.start()
+
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STARTED,
-            dataSummary = "ChibiService foreground started, AgentRuntime active",
+            dataSummary = "ChibiService foreground started, AgentRuntime + InitiativeEngine active",
         )
 
         return START_STICKY
@@ -89,13 +99,16 @@ class ChibiService : Service() {
 
     override fun onDestroy() {
         Timber.i("ChibiService.onDestroy()")
+        initiativeEngine.stop()
+        notificationEventBridge.stop()
+        systemEventReceiver.unregister()
         agentRuntime.stop()
         overlayWindowManager.hideBubble()
         projectionManager.teardown()
         scope.cancel()
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STOPPED,
-            dataSummary = "ChibiService destroyed, AgentRuntime stopped",
+            dataSummary = "ChibiService destroyed, AgentRuntime + InitiativeEngine stopped",
         )
         super.onDestroy()
     }

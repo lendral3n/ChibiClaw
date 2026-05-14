@@ -30,12 +30,16 @@ import com.chibiclaw.ai.llm.webview.SessionExtractor
 import com.chibiclaw.data.prefs.SecurePreferences
 import com.chibiclaw.permissions.ShizukuManager
 import com.chibiclaw.service.ChibiService
+import com.chibiclaw.agent.initiative.trigger.CronParser
 import com.chibiclaw.ai.llm.AdapterQuotaTracker
 import com.chibiclaw.ai.llm.InferenceRouter
 import com.chibiclaw.ai.llm.adapters.CloudSessionRotator
+import com.chibiclaw.data.repository.StandingInstructionRepository
 import com.chibiclaw.ui.chat.ChatScreen
 import com.chibiclaw.ui.debug.TaskDetailScreen
 import com.chibiclaw.ui.debug.TaskListScreen
+import com.chibiclaw.ui.initiative.StandingInstructionEditorScreen
+import com.chibiclaw.ui.initiative.StandingInstructionListScreen
 import com.chibiclaw.ui.settings.AiEngineSettingsScreen
 import com.chibiclaw.ui.setup.SetupNavigator
 import com.chibiclaw.vision.projection.ProjectionTokenStore
@@ -63,6 +67,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var quotaTracker: AdapterQuotaTracker
     @Inject lateinit var sessionRotator: CloudSessionRotator
     @Inject lateinit var projectionTokenStore: ProjectionTokenStore
+    @Inject lateinit var standingInstructionRepo: StandingInstructionRepository
+    @Inject lateinit var cronParser: CronParser
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -88,6 +94,8 @@ class MainActivity : ComponentActivity() {
                                 quotaTracker = quotaTracker,
                                 sessionRotator = sessionRotator,
                                 sessionExtractor = sessionExtractor,
+                                standingInstructionRepo = standingInstructionRepo,
+                                cronParser = cronParser,
                             )
                         } else {
                             SetupNavigator(
@@ -129,6 +137,8 @@ private fun HomeNavigation(
     quotaTracker: AdapterQuotaTracker,
     sessionRotator: CloudSessionRotator,
     sessionExtractor: SessionExtractor,
+    standingInstructionRepo: StandingInstructionRepository,
+    cronParser: CronParser,
 ) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "chat") {
@@ -148,6 +158,24 @@ private fun HomeNavigation(
                 quotaTracker = quotaTracker,
                 rotator = sessionRotator,
                 sessionExtractor = sessionExtractor,
+            )
+        }
+        composable("initiative/list") {
+            StandingInstructionListScreen(
+                repository = standingInstructionRepo,
+                onCreateNew = { navController.navigate("initiative/edit/new") },
+                onEdit = { id -> navController.navigate("initiative/edit/$id") },
+            )
+        }
+        composable("initiative/edit/{id}") { backStackEntry ->
+            val raw = backStackEntry.arguments?.getString("id") ?: "new"
+            val editingId = if (raw == "new") null else raw
+            StandingInstructionEditorScreen(
+                repository = standingInstructionRepo,
+                cronParser = cronParser,
+                editingId = editingId,
+                onDone = { navController.popBackStack("initiative/list", inclusive = false) },
+                onCancel = { navController.popBackStack() },
             )
         }
     }

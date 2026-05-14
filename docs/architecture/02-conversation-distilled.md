@@ -6,6 +6,88 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 6 Initiative + Standing Instructions
+
+**Durasi:** ~2.5 jam
+**Outcome:** Phase 6 selesai compile 100%. Proactive agent live: InitiativeEngine tick + event loop, ComplexTrigger sealed-class, CronParser via cron-utils, predicate evaluator hand-rolled, SafetyGate honor pre-authorized tools. Build success 1m33s.
+
+### Topik Kunci
+- StandingInstructionEntity + Room v4 + Repository CRUD
+- ComplexTrigger polymorphic JSON (Time/Event/Predicate/Composite/Geofence)
+- EventBus SharedFlow + SystemEventReceiver (battery/screen/user-present) + NotificationEventBridge
+- InitiativeEngine: tick 10s + event loop, fire mutex guard, canFire enforce
+- CronParser pakai cron-utils 9.2.1 UNIX
+- SimplePredicateEvaluator: tokenize + recursive descent + Context resolver (battery/screen/network/time/event/location)
+- TemplateRenderer `{{event.text}}` substitution
+- SafetyGate pre-auth lookup via task.triggerSource → StandingInstruction.preAuthorizedTools
+- 2 Compose screens: StandingInstructionListScreen + StandingInstructionEditorScreen (3-tab)
+
+### Module yang Ditulis Phase 6
+**Entity + Repo (3):**
+- `data/database/StandingInstructionEntity.kt`
+- `data/database/StandingInstructionDao.kt`
+- `data/repository/StandingInstructionRepository.kt`
+
+**Initiative core (5):**
+- `agent/initiative/EventBus.kt`
+- `agent/initiative/InitiativeEngine.kt`
+- `agent/initiative/trigger/ComplexTrigger.kt` (sealed polymorphic)
+- `agent/initiative/trigger/TriggerEvaluator.kt`
+- `agent/initiative/trigger/CronParser.kt` (cron-utils wrapper)
+- `agent/initiative/trigger/SimplePredicateEvaluator.kt` (hand-rolled grammar)
+- `agent/initiative/trigger/TemplateRenderer.kt`
+
+**Event sources (2):**
+- `world/observers/SystemEventReceiver.kt` (battery/screen/user-present)
+- `world/observers/NotificationEventBridge.kt` (bridge ChibiNotificationListener)
+
+**UI (2):**
+- `ui/initiative/StandingInstructionListScreen.kt`
+- `ui/initiative/StandingInstructionEditorScreen.kt` (3-tab + 4 trigger kind)
+
+**Wiring (8 modified):**
+- `app/build.gradle.kts` (enable cron-utils)
+- `data/database/AppDatabase.kt` (v3 → v4)
+- `di/AppModule.kt` (provideStandingInstructionDao)
+- `agent/tools/safety/SafetyGate.kt` (pre-auth path)
+- `service/ChibiService.kt` (register receivers + InitiativeEngine.start/stop)
+- `ui/MainActivity.kt` (inject + NavHost routes initiative/list + initiative/edit/{id})
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 1m 33s
+43 actionable tasks: 13 executed, 30 up-to-date
+```
+
+### Issue Encountered & Fixed
+1. AuditLogger.log() tidak punya `standingInstructionId` parameter — embed ID di dataSummary string sebagai workaround. Phase 9 add column proper.
+2. WorldSnapshot field flat (batteryLevel/batteryCharging/networkOnline/screenOn), bukan nested object — adjust resolver di SimplePredicateEvaluator.
+
+### Keputusan di Session Ini
+- Geofence + Calendar + AppLaunch observers defer Phase 9 (EventType enum sudah include, observer impl tinggal tambah)
+- Composite trigger UI dibatasi 2-children AND preset (advanced JSON editor defer Phase 9)
+- Cron tick-based 10s cukup untuk standar use case; AlarmManager precise defer Phase 9
+- Predicate LLM fallback defer Phase 9
+- Setup wizard tidak tambah step instruction CRUD (via Settings di runtime)
+
+### Aksi Dilakukan
+- 13 file Kotlin baru + 8 modified
+- `progress-audit-phase-6.md` ditulis lengkap
+
+### Open Items / Next
+- Commit Phase 6
+- Push manual
+- Phase 7 (Memory mature: KB query + pattern detection) ready start
+
+### State Akhir Session
+- Build hijau, InitiativeEngine live di service lifecycle
+- Tool catalog tetap 22 (Phase 6 fokus orchestration layer)
+- Setup wizard masih 10-step
+- AuditLog STANDING_INSTRUCTION_FIRED entry recorded per fire
+
+---
+
 ## Session 2026-05-14 — Phase 5 Vision (MediaProjection + MiniCPM-V + OCR + 6 tools)
 
 **Durasi:** ~2.5 jam

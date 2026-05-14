@@ -2,7 +2,10 @@ package com.chibiclaw.agent.tools.safety
 
 import com.chibiclaw.agent.tools.ToolCall
 import com.chibiclaw.agent.tools.ToolSpec
+import com.chibiclaw.agent.tools.ToolSeverity
+import com.chibiclaw.data.database.TaskChannel
 import com.chibiclaw.data.database.TaskEntity
+import com.chibiclaw.data.repository.StandingInstructionRepository
 import com.chibiclaw.service.overlay.OverlayWindowManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -14,26 +17,25 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * SafetyGate — Phase 3 inline confirmation untuk HIGH severity tool.
+ * SafetyGate — inline confirmation untuk HIGH severity tool.
  *
  * Aturan:
  *  - CHAT channel: SELALU minta confirmation (user interactive).
- *  - STANDING channel: pre-authorize via StandingInstruction.preAuthorizedTools
- *    (Phase 6) — kalau tool listed di whitelist, skip overlay.
- *  - AUTONOMOUS channel: similar STANDING.
- *
- * Phase 3: CHAT channel pre-auth not implemented; STANDING pre-auth juga
- * defer Phase 6 (saat StandingInstruction entity live). Sekarang: SELALU
- * minta confirmation untuk HIGH severity. ToolDispatcher pakai dengan
- * 30 detik auto-deny default.
+ *  - STANDING channel + task.triggerSource = "standing:<id>":
+ *    lookup StandingInstruction.preAuthorizedTools — kalau tool listed di
+ *    whitelist, skip overlay. Audit log tetap mencatat eksekusi.
+ *  - AUTONOMOUS channel: defer Phase 7+ (sementara perlakukan sama dengan
+ *    STANDING — kalau ada triggerSource cek pre-auth).
  */
 @Singleton
 class SafetyGate @Inject constructor(
     private val overlayWindowManager: OverlayWindowManager,
+    private val standingRepo: StandingInstructionRepository,
 ) {
 
     /**
-     * Tampilkan confirmation modal, return true kalau user approve.
+     * Tampilkan confirmation modal, return true kalau user approve atau
+     * task channel == STANDING dengan tool pre-authorized.
      *
      * Timeout default 30 detik → auto-deny.
      */
@@ -43,7 +45,13 @@ class SafetyGate @Inject constructor(
         task: TaskEntity,
         timeoutMs: Long = 30_000,
     ): Boolean {
-        if (!shouldGate(toolSpec, task)) return true
+        if (toolSpec.safety.severity != ToolSeverity.HIGH) return true
+
+        // Pre-auth path: STANDING/AUTONOMOUS channel + valid trigger source.
+        if (task.channel != TaskChannel.CHAT && isPreAuthorized(toolSpec, task)) {
+            Timber.i("Pre-authorized: tool=${toolSpec.name} via ${task.triggerSource}")
+            return true
+        }
 
         val deferred = CompletableDeferred<Boolean>()
         // WindowManager.addView WAJIB di Main thread.
@@ -66,15 +74,15 @@ class SafetyGate @Inject constructor(
     }
 
     /**
-     * Decide apakah tool ini butuh gate. Phase 3: HIGH severity selalu gate
-     * kecuali (Phase 6 nanti) preAuthorize via standing instruction.
+     * Cek apakah task dari StandingInstruction yang sudah pre-authorize tool ini.
+     * Format triggerSource: "standing:<id>".
      */
-    private fun shouldGate(toolSpec: ToolSpec, task: TaskEntity): Boolean {
-        if (toolSpec.safety.severity != com.chibiclaw.agent.tools.ToolSeverity.HIGH) return false
-        // Phase 6: cek task.triggerSource → StandingInstruction.preAuthorizedTools
-        // Phase 3: tidak ada whitelist, semua HIGH severity → gate
-        @Suppress("UNUSED_PARAMETER", "UNUSED_VARIABLE")
-        val channelHint = task.channel
-        return true
+    private suspend fun isPreAuthorized(toolSpec: ToolSpec, task: TaskEntity): Boolean {
+        if (!toolSpec.safety.preAuthorizable) return false
+        val src = task.triggerSource ?: return false
+        if (!src.startsWith("standing:")) return false
+        val id = src.removePrefix("standing:")
+        val entity = standingRepo.get(id) ?: return false
+        return toolSpec.name in entity.preAuthorizedTools()
     }
 }
