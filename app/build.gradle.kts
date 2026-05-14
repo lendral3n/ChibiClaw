@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
@@ -11,6 +13,16 @@ ksp {
     arg("room.incremental", "true")
 }
 
+// Phase 9: baca API keys dari local.properties (gitignored).
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+fun localProp(key: String): String =
+    localProps.getProperty(key) ?: System.getenv(key) ?: ""
+
 android {
     namespace = "com.chibiclaw"
     compileSdk = 36
@@ -23,6 +35,11 @@ android {
         versionName = "4.0.0-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Phase 9: API keys via BuildConfig (sumber: local.properties or env).
+        // Auto-populate ke SecurePreferences di first launch (lihat ChibiApplication).
+        buildConfigField("String", "CHIBI_GEMINI_API_KEY", "\"${localProp("CHIBI_GEMINI_API_KEY")}\"")
+        buildConfigField("String", "CHIBI_ELEVENLABS_API_KEY", "\"${localProp("CHIBI_ELEVENLABS_API_KEY")}\"")
     }
 
     signingConfigs {
