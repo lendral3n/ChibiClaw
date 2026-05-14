@@ -12,11 +12,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * TaskManager — facade di atas TaskRepository. Tambahkan concurrency control
- * + slot tracking + listener untuk AgentRuntime dispatch.
+ * TaskManager — facade di atas TaskRepository. Concurrency control + slot
+ * tracking + listener untuk AgentRuntime dispatch.
  *
- * Phase 1: max 1 task running paralel (simple sequential).
- * Phase 8: extend ke 3-5 paralel dengan resource scheduler.
+ * Phase 8: max 3 task paralel. Priority + cron-fairness:
+ *   - `runnable()` di TaskDao sudah ORDER BY priority DESC, created_at ASC
+ *   - High-priority task akan dapat slot duluan saat free
+ *   - Tidak ada preemption sintetik — slot dilepas saat task complete
+ *
+ * Slot bookkeeping: ConcurrentHashMap thread-safe untuk reader; mutex hanya
+ * untuk transactional pickup (nextRunnable atomic dengan slot reserve).
  */
 @Singleton
 class TaskManager @Inject constructor(
@@ -25,7 +30,7 @@ class TaskManager @Inject constructor(
     private val activeSlots = ConcurrentHashMap<String, Unit>()
     private val mutex = Mutex()
 
-    private val maxParallel: Int = 1  // Phase 1; Phase 8 → 3-5
+    private val maxParallel: Int = MAX_PARALLEL_TASKS
 
     suspend fun enqueue(
         goal: String,
@@ -62,14 +67,25 @@ class TaskManager @Inject constructor(
 
     fun isActive(taskId: String): Boolean = activeSlots.containsKey(taskId)
 
+    fun activeCount(): Int = activeSlots.size
+
+    fun activeIds(): Set<String> = activeSlots.keys.toSet()
+
+    fun maxParallel(): Int = maxParallel
+
     suspend fun resumeIncomplete(): List<TaskEntity> {
-        // Phase 1: kalau ada incomplete task post-crash, mark failed (recovery
-        // sederhana). Phase 8 polish: resume tergantung umur + last step.
+        // Phase 8: kalau ada incomplete task post-crash, mark failed (recovery
+        // sederhana). Polish berikutnya: resume tergantung umur + last step
+        // (akan butuh persistent agentstep ledger lookup).
         val incomplete = repo.listIncomplete()
         incomplete.forEach { task ->
             Timber.w("Resume: marking stale task ${task.id} as failed")
-            repo.markFailed(task.id, "Service restart — task recovery (Phase 1: fail-on-restart)")
+            repo.markFailed(task.id, "Service restart — task recovery fail-on-restart")
         }
         return incomplete
+    }
+
+    companion object {
+        const val MAX_PARALLEL_TASKS = 3
     }
 }

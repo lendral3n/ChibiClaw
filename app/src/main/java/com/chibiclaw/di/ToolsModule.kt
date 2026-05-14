@@ -18,6 +18,7 @@ import com.chibiclaw.agent.tools.impl.ShizukuExecTool
 import com.chibiclaw.agent.tools.impl.ShizukuForceStopTool
 import com.chibiclaw.agent.tools.impl.ShizukuGrantPermissionTool
 import com.chibiclaw.agent.tools.impl.SystemActionTool
+import com.chibiclaw.agent.tools.impl.TaskCreateSubtaskTool
 import com.chibiclaw.agent.tools.impl.VisionDescribeTool
 import com.chibiclaw.agent.tools.impl.VisionExtractTextTool
 import com.chibiclaw.agent.tools.impl.VisionTapTool
@@ -130,4 +131,8 @@ abstract class ToolsModule {
 
     @Binds @IntoMap @StringKey("world_get_schedule")
     abstract fun bindWorldGetScheduleTool(impl: WorldGetScheduleTool): Tool
+
+    // ── Phase 8: Self-correction + parallel ─────────────────────────────────
+    @Binds @IntoMap @StringKey("task_create_subtask")
+    abstract fun bindTaskCreateSubtaskTool(impl: TaskCreateSubtaskTool): Tool
 }

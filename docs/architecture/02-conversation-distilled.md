@@ -6,6 +6,88 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 8 Self-Correction + Concurrency
+
+**Durasi:** ~2 jam
+**Outcome:** Phase 8 selesai compile 100%. Multi-slot agent (3 paralel), ResourceScheduler, TaskDependency entity (Room v5), task_create_subtask tool, AgentCleanupWorker, ErrorStatsScreen. Self-correction playbook di system prompt. Build success 2m3s. Total tools 25.
+
+### Topik Kunci
+- ResourceScheduler: Mutex (mic/screen/tts) + Semaphore (shizuku=3, cloud=3) + 10s timeout
+- ToolDispatcher resourceKindFor mapping per tool name → resource
+- TaskManager MAX_PARALLEL_TASKS=3 + activeCount/activeIds/maxParallel API
+- AgentRuntime.runOneTick fill-all-slots while loop
+- TaskDependencyEntity FK CASCADE + DependencyStatus PENDING/RESOLVED/FAILED
+- AppDatabase v4 → v5
+- task_create_subtask tool LOW severity dengan __taskId stamp
+- ToolDispatcher TOOLS_NEEDING_TASK_ID set (escalate_to_cloud + task_create_subtask)
+- AgentCleanupWorker HiltWorker daily housekeeping via cleanupExpired
+- MemoryWorkScheduler enqueue 3 periodic worker (pattern, decay, cleanup) — KEEP policy
+- AuditDao.countByOutcome + AuditOutcomeCount data class
+- AuditLogger.toolOutcomeCountsLast7d for dashboard
+- ErrorStatsScreen: slots/resources/outcome counts cards + refresh button
+- PromptBuilder system prompt extended self-correction per ErrorClass + subtask hint
+
+### Module yang Ditulis Phase 8
+**Scheduler + Cleanup (3):**
+- `agent/scheduler/ResourceScheduler.kt` (Mutex + Semaphore + ResourceState snapshot)
+- `agent/cleanup/AgentCleanupWorker.kt` (HiltWorker daily)
+- updates `memory/miner/MemoryWorkScheduler.kt` (+enqueue AgentCleanupWorker)
+
+**Dependency + Subtask (3):**
+- `data/database/TaskDependencyEntity.kt`
+- `data/database/TaskDependencyDao.kt`
+- `agent/tools/impl/TaskCreateSubtaskTool.kt` (LOW severity)
+
+**Observability (2):**
+- `ui/debug/ErrorStatsScreen.kt`
+- `AuditDao.countByOutcome` + `AuditOutcomeCount` data class
+- `AuditLogger.toolOutcomeCountsLast7d`
+
+**Wiring (8 modified):**
+- `agent/TaskManager.kt` (3 parallel + API expose)
+- `agent/AgentRuntime.kt` (fill-all-slots)
+- `agent/tools/ToolDispatcher.kt` (ResourceScheduler inject + resourceKindFor + TOOLS_NEEDING_TASK_ID set)
+- `ai/llm/PromptBuilder.kt` self-correction playbook
+- `data/database/AppDatabase.kt` v4 → v5
+- `di/AppModule.kt` provideTaskDependencyDao
+- `di/ToolsModule.kt` task_create_subtask binding
+- `ui/MainActivity.kt` inject TaskManager + ResourceScheduler + NavHost route debug/stats
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 2m 3s
+43 actionable tasks: 12 executed, 31 up-to-date
+```
+
+### Issue Encountered & Fixed
+- ToolsModule.kt insertion order: Phase 7 memory tools landed pre-Phase 5 vision section by error. Phase 8 task_create_subtask appended at file tail untuk safety.
+
+### Keputusan di Session Ini
+- Dependency resolver auto-mark RESOLVED on subtask complete defer Phase 9 (perlu observer di TaskRepository.markCompleted)
+- TaskRepository.runnable belum filter BLOCKED-on-pending-deps; rely di LLM aware (task_create_subtask emit sebelum lanjut)
+- Per-error-class counter di model_config defer Phase 9 (saat ini audit log aggregate cukup)
+- Subtask depth limit + dependency cycle detection defer Phase 9 (manual test ketemu kalau jadi issue)
+- Audit log dedicated counter table defer Phase 9
+
+### Aksi Dilakukan
+- 7 file Kotlin baru + 8 modified
+- `progress-audit-phase-8.md` ditulis lengkap
+
+### Open Items / Next
+- Commit Phase 8
+- Push manual
+- Phase 9 (Polish: manual test, in-app model downloader, missing edge cases) ready start
+
+### State Akhir Session
+- Build hijau, 25 tools advertised ke LLM
+- Multi-slot 3 paralel aktif
+- Self-correction playbook di prompt (LLM-driven error recovery)
+- ErrorStatsScreen live di NavHost route debug/stats
+- 3 periodic worker enqueued: pattern miner (weekly), memory decay (daily), agent cleanup (daily)
+
+---
+
 ## Session 2026-05-14 — Phase 7 Memory Maturity (CategoryTemplates + Workers + Inspector)
 
 **Durasi:** ~2 jam

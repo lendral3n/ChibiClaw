@@ -75,12 +75,15 @@ class AgentRuntime @Inject constructor(
     }
 
     private suspend fun runOneTick() {
-        val next = taskManager.nextRunnable() ?: return
-        scope.launch {
-            try {
-                executeTask(next.id)
-            } finally {
-                taskManager.releaseSlot(next.id)
+        // Phase 8: fill all free slots in one tick (was 1-at-a-time pre-Phase 8).
+        while (true) {
+            val next = taskManager.nextRunnable() ?: return
+            scope.launch {
+                try {
+                    executeTask(next.id)
+                } finally {
+                    taskManager.releaseSlot(next.id)
+                }
             }
         }
     }

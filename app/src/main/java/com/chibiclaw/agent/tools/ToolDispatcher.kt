@@ -1,5 +1,7 @@
 package com.chibiclaw.agent.tools
 
+import com.chibiclaw.agent.scheduler.ResourceKind
+import com.chibiclaw.agent.scheduler.ResourceScheduler
 import com.chibiclaw.agent.tools.safety.SafetyGate
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
@@ -28,6 +30,7 @@ class ToolDispatcher @Inject constructor(
     private val registry: ToolRegistry,
     private val auditLogger: AuditLogger,
     private val safetyGate: SafetyGate,
+    private val resourceScheduler: ResourceScheduler,
 ) {
 
     suspend fun execute(call: ToolCall, task: TaskEntity): ToolResult {
@@ -66,17 +69,29 @@ class ToolDispatcher @Inject constructor(
 
         val timeoutMs = tool.spec.capability.latencyMsRange.last * 3L
 
-        // Phase 4: stamp __taskId untuk tools yang butuh task context
-        // (escalate_to_cloud pin per-task adapter). Tools lain ignore.
-        val effectiveCall = if (call.tool == "escalate_to_cloud") {
+        // Phase 4+8: stamp __taskId untuk tools yang butuh task context
+        // (escalate_to_cloud, task_create_subtask).
+        val effectiveCall = if (call.tool in TOOLS_NEEDING_TASK_ID) {
             val argsWithTask = call.args.toMutableMap()
             argsWithTask["__taskId"] = JsonPrimitive(task.id)
             call.copy(args = JsonObject(argsWithTask))
         } else call
 
+        val resourceKind = resourceKindFor(call.tool)
         val result = try {
             withTimeoutOrNull(timeoutMs) {
-                tool.execute(effectiveCall)
+                if (resourceKind != null) {
+                    resourceScheduler.withResource(resourceKind) {
+                        tool.execute(effectiveCall)
+                    } ?: ToolResult.Error(
+                        callId = call.callId,
+                        errorClass = ErrorClass.TIMEOUT,
+                        message = "Resource ${resourceKind.name} sibuk lebih dari 10s",
+                        recoveryHint = "Retry sebentar lagi, atau switch ke alternatif tool",
+                    )
+                } else {
+                    tool.execute(effectiveCall)
+                }
             } ?: ToolResult.Timeout(call.callId, timeoutMs)
         } catch (t: TimeoutCancellationException) {
             ToolResult.Timeout(call.callId, timeoutMs)
@@ -106,5 +121,21 @@ class ToolDispatcher @Inject constructor(
         )
 
         return result
+    }
+
+    /**
+     * Map tool name → resource yang harus di-acquire. Null kalau tool tidak
+     * butuh shared resource lock (a11y, memory, intent open — relatif cepat
+     * dan tidak konflik).
+     */
+    private fun resourceKindFor(toolName: String): ResourceKind? = when (toolName) {
+        "vision_tap", "vision_describe", "vision_extract_text" -> ResourceKind.SCREEN_CAPTURE
+        "shizuku_exec", "shizuku_force_stop", "shizuku_grant_permission" -> ResourceKind.SHIZUKU_BINDER
+        "escalate_to_cloud" -> ResourceKind.CLOUD_CALL
+        else -> null
+    }
+
+    companion object {
+        private val TOOLS_NEEDING_TASK_ID = setOf("escalate_to_cloud", "task_create_subtask")
     }
 }

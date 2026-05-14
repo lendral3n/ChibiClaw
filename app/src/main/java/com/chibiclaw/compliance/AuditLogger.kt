@@ -67,6 +67,16 @@ class AuditLogger @Inject constructor(
     }
 
     /**
+     * Phase 8: aggregate tool execution outcome last 7 days untuk dashboard.
+     * Cheap query, dipanggil dari UI on-demand.
+     */
+    suspend fun toolOutcomeCountsLast7d(): Map<AuditResultStatus, Int> {
+        val since = Clock.System.now().minus(7.days)
+        return auditDao.countByOutcome(AuditActionType.TOOL_EXECUTED, since)
+            .associate { it.status to it.cnt }
+    }
+
+    /**
      * Redact PII patterns (phone, email, card number) supaya audit log tidak bocor
      * sensitive content.
      */

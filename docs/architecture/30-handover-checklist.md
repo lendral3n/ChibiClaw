@@ -21,9 +21,9 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-14 session "Phase 7 Memory Maturity (CategoryTemplates + Workers + Inspector)"
+**Update terakhir:** 2026-05-14 session "Phase 8 Self-Correction + Concurrency"
 
-**Phase aktif:** Phase 7 selesai compile (100% W1, 95% W2). Phase 8 ready untuk start.
+**Phase aktif:** Phase 8 selesai compile (100%). Phase 9 (polish) ready untuk start.
 
 **Phase Status Summary:**
 - **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
@@ -33,7 +33,8 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Commit `1d993de`.
 - **Phase 5** (Vision): ✅ Compile DONE (100% W1–W3). Commit `dffee13`.
 - **Phase 6** (Initiative + Standing): ✅ Compile DONE (100% core, 90% UI). Commit `dbc242e`.
-- **Phase 7** (Memory Maturity): ✅ Compile DONE (100% W1, 95% W2). Belum committed.
+- **Phase 7** (Memory Maturity): ✅ Compile DONE (100% W1, 95% W2). Commit `c364541`.
+- **Phase 8** (Self-Correction + Concurrency): ✅ Compile DONE (100%). Belum committed.
 
 **Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
 **Build:** sukses 54 detik (warm post-Phase3), APK debug
@@ -44,13 +45,13 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 - Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
 
 **Working tree:**
-- Phase 7 files: 8 baru (CategoryTemplates, PatternMinerWorker, MemoryDecayWorker, MemoryWorkScheduler, MemoryListByCategoryTool, MemoryInferPatternTool, MemoryInspectorScreen, progress-audit-phase-7.md) + 7 modified (TaskDao + MemoryCategoryCount, TaskRepository recentSnapshot, MemoryRepository extensions, PromptBuilder kategori hints, ChibiService scheduler, ToolsModule bindings, MainActivity inject + NavHost)
-- Git: HEAD = `dbc242e` (Phase 6 commit). Lendra sudah push manual sampai sini.
+- Phase 8 files: 7 baru (ResourceScheduler, AgentCleanupWorker, TaskDependencyEntity, TaskDependencyDao, TaskCreateSubtaskTool, ErrorStatsScreen, progress-audit-phase-8.md) + 8 modified (TaskManager 3 parallel, AgentRuntime fill-all-slots, ToolDispatcher resource wrap + __taskId set, PromptBuilder self-correction playbook, AppDatabase v5, AppModule provideTaskDependencyDao, ToolsModule task_create_subtask, MainActivity inject + NavHost debug/stats, AuditDao countByOutcome + AuditOutcomeCount, AuditLogger toolOutcomeCountsLast7d, MemoryWorkScheduler enqueue cleanup)
+- Git: HEAD = `c364541` (Phase 7 commit). Lendra sudah push manual sampai sini.
 
 **Next action:**
-1. Commit Phase 7 ke git lokal
+1. Commit Phase 8 ke git lokal
 2. Lendra push manual lagi
-3. **Phase 8 (Self-correction + parallel tasks + retry-with-different-tool)** ready start
+3. **Phase 9 (Polish: manual test, in-app model downloader, missing edge cases)** ready start
 4. Sub-milestone Phase 1+2+5 paralel kapan saja (push model files + enable deps optional)
 
 **CI/CD Behavior Baru:**
@@ -62,7 +63,8 @@ Detail Phase 4 audit: [progress-audit-phase-4.md](progress-audit-phase-4.md).
 Detail Phase 5 audit: [progress-audit-phase-5.md](progress-audit-phase-5.md).
 Detail Phase 6 audit: [progress-audit-phase-6.md](progress-audit-phase-6.md).
 Detail Phase 7 audit: [progress-audit-phase-7.md](progress-audit-phase-7.md).
-Detail Phase 8: [29-phase-8-self-correction.md](29-phase-8-self-correction.md).
+Detail Phase 8 audit: [progress-audit-phase-8.md](progress-audit-phase-8.md).
+Detail Phase 9: [2A-phase-9-polish.md](2A-phase-9-polish.md).
 
 ---
 

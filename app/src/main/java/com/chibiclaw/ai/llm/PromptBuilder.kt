@@ -48,6 +48,20 @@ Kategori memory (pilih saat memory_remember):
 - FACT: fakta umum (topic, value, source, asserted_at)
 - PREFERENCE: preferensi (domain, preference, rationale, weight)
 Saat task complete dan ada fakta baru tentang user, emit memory_remember sebelum done.
+
+Self-correction (saat tool error, observasi error_class):
+- SELECTOR_NOT_FOUND: a11y gagal cari node → coba vision_tap (visual grounding) ATAU a11y_describe_screen lihat hierarchy lalu retry dengan selector lain. Max retry 2 per selector.
+- PERMISSION_DENIED: skip tool ini, kalau ada permission user-grantable arahkan via system_action ke Settings; kalau tidak, await_user.
+- TIMEOUT: kalau ada alternatif tool dengan cost lebih rendah, switch. Kalau task butuh cloud, escalate_to_cloud. Kalau tidak, fail dengan ringkasan.
+- AMBIGUOUS: minta klarifikasi via await_user (jangan tebak destructive action).
+- NETWORK_ERROR: wait 5s lalu retry sekali. Kalau masih gagal, kalau task offline-ok skip; kalau butuh online, await_user.
+- RATE_LIMITED: tunggu cooldown (wait tool) atau escalate ke adapter lain via escalate_to_cloud.
+- INVALID_ARGS: re-emit tool call dengan args yang dikoreksi (jangan retry same args).
+- NOT_AVAILABLE: tool butuh dependency yang absent (model belum di-push, session expired). Recovery hint biasanya kasih path; sampaikan ke user via await_user atau fail dengan summary.
+- UNKNOWN: max retry 1; kalau gagal lagi, fail.
+Hindari same-tool-same-error loop — kalau 2 kali same error class same tool, switch strategi atau fail.
+
+Subtask: kalau task kompleks (mis. "summary 3 artikel"), pakai task_create_subtask untuk dekomposisi parallel.
 """
 
     fun toGemmaFormat(prompt: AgentPrompt): String = buildString {

@@ -6,6 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.chibiclaw.agent.cleanup.AgentCleanupWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
@@ -13,8 +14,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * MemoryWorkScheduler — enqueue PatternMinerWorker (weekly) + MemoryDecayWorker
- * (daily) saat service start. Re-enqueue idempotent via KEEP policy.
+ * MemoryWorkScheduler — enqueue Phase 7 (memory miner + decay) dan Phase 8
+ * (agent cleanup) periodic workers. Re-enqueue idempotent via KEEP policy.
  */
 @Singleton
 class MemoryWorkScheduler @Inject constructor(
@@ -53,6 +54,20 @@ class MemoryWorkScheduler @Inject constructor(
             decayReq,
         )
 
-        Timber.i("MemoryWorkScheduler: pattern miner + decay enqueued (periodic)")
+        val cleanupReq = PeriodicWorkRequestBuilder<AgentCleanupWorker>(1, TimeUnit.DAYS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .build(),
+            )
+            .setInitialDelay(3, TimeUnit.HOURS)
+            .build()
+        wm.enqueueUniquePeriodicWork(
+            AgentCleanupWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            cleanupReq,
+        )
+
+        Timber.i("Workers enqueued: pattern miner (weekly), memory decay (daily), agent cleanup (daily)")
     }
 }

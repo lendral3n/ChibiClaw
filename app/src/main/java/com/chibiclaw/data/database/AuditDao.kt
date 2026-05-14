@@ -30,4 +30,17 @@ interface AuditDao {
 
     @Query("DELETE FROM audit_log")
     suspend fun deleteAll()
+
+    @Query("""
+        SELECT result_status as status, COUNT(*) as cnt
+        FROM audit_log
+        WHERE action_type = :type AND timestamp >= :since
+        GROUP BY result_status
+    """)
+    suspend fun countByOutcome(type: AuditActionType, since: Instant): List<AuditOutcomeCount>
 }
+
+data class AuditOutcomeCount(
+    val status: AuditResultStatus,
+    val cnt: Int,
+)

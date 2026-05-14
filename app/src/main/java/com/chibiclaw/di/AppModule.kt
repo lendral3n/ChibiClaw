@@ -8,6 +8,7 @@ import com.chibiclaw.data.database.MemoryDao
 import com.chibiclaw.data.database.ModelConfigDao
 import com.chibiclaw.data.database.StandingInstructionDao
 import com.chibiclaw.data.database.TaskDao
+import com.chibiclaw.data.database.TaskDependencyDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,4 +48,7 @@ object AppModule {
     @Provides
     fun provideStandingInstructionDao(db: AppDatabase): StandingInstructionDao =
         db.standingInstructionDao()
+
+    @Provides
+    fun provideTaskDependencyDao(db: AppDatabase): TaskDependencyDao = db.taskDependencyDao()
 }
