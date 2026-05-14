@@ -126,6 +126,46 @@
             </intent-filter>
         </receiver>
 
+        <!-- ════════════════════════════════════════════════════════════════
+             Phase 3 services (declared di Phase 9 bugfix — sebelumnya orphan
+             di kode tanpa manifest entry, akibatnya tidak nampak di Settings).
+             ════════════════════════════════════════════════════════════════ -->
+
+        <!-- ChibiAccessibilityService — gateway untuk a11y_* tools.
+             android:label WAJIB ada (string non-empty), kalau kosong MIUI/HyperOS
+             menyembunyikan entry dari list. exported=true karena system bind. -->
+        <service
+            android:name=".accessibility.ChibiAccessibilityService"
+            android:label="@string/accessibility_service_label"
+            android:description="@string/accessibility_service_description"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- ChibiNotificationListener — buffer notif untuk world_get_notifications +
+             EventBus standing instruction trigger NOTIFICATION_POSTED. -->
+        <service
+            android:name=".accessibility.ChibiNotificationListener"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting" />
+            <meta-data
+                android:name="android.service.notification.disabled_filter_types"
+                android:value="ongoing|silent" />
+        </service>
+
     </application>
 
 </manifest>

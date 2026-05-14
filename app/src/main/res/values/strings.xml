@@ -39,6 +39,9 @@
     <string name="accessibility_service_summary">Membantu Fuu mengontrol UI app lain (tap, type, scroll, describe).</string>
     <string name="accessibility_service_description">ChibiClaw butuh akses Accessibility supaya Fuu bisa lakukan tindakan di app yang kamu pakai — misal tap tombol, ketik di field, scroll halaman. Tanpa ini, Fuu hanya bisa buka app via Intent, tidak bisa berinteraksi UI dalamnya.\n\nData yang dibaca: hierarki view + teks visible di app foreground. Tidak disimpan ke server. Audit log lokal mencatat setiap aksi.</string>
 
+    <!-- Phase 9 bugfix: NotificationListener label (wajib biar muncul di Settings) -->
+    <string name="notification_listener_label">ChibiClaw Notifications</string>
+
     <!-- Tool Confirmation Overlay -->
     <string name="confirm_high_severity">HIGH SEVERITY</string>
     <string name="confirm_question">Fuu mau lakukan ini:</string>
