@@ -57,7 +57,7 @@ class GeminiFreeAdapter @Inject constructor(
         displayName = "Gemini 2.5 Flash (Free)",
         contextWindow = 1_000_000,
         supportsToolCalling = true,
-        supportsStreaming = true,
+        supportsStreaming = false,  // Phase 9: aggregate-only; streamGenerateContent SSE TBD
         supportsVision = true,
         supportsConstrainedDecoding = true,
         isLocal = false,
@@ -167,6 +167,15 @@ class GeminiFreeAdapter @Inject constructor(
                 add(buildJsonObject {
                     put("role", "user")
                     put("parts", buildJsonArray {
+                        // Phase 9: inline image payload kalau vision fallback escalate.
+                        prompt.imageJpegBytes?.let { bytes ->
+                            add(buildJsonObject {
+                                put("inlineData", buildJsonObject {
+                                    put("mimeType", "image/jpeg")
+                                    put("data", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                                })
+                            })
+                        }
                         add(buildJsonObject { put("text", userPart) })
                     })
                 })

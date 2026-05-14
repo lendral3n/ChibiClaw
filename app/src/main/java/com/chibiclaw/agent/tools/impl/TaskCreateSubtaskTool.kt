@@ -12,8 +12,10 @@ import com.chibiclaw.agent.tools.ToolSeverity
 import com.chibiclaw.agent.tools.ToolSpec
 import com.chibiclaw.data.database.DependencyStatus
 import com.chibiclaw.data.database.TaskChannel
+import com.chibiclaw.data.database.TaskDao
 import com.chibiclaw.data.database.TaskDependencyDao
 import com.chibiclaw.data.database.TaskDependencyEntity
+import com.chibiclaw.data.database.TaskStatus
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -38,6 +40,7 @@ import javax.inject.Inject
 class TaskCreateSubtaskTool @Inject constructor(
     private val taskManager: TaskManager,
     private val dependencyDao: TaskDependencyDao,
+    private val taskDao: TaskDao,
 ) : Tool {
 
     override val spec = ToolSpec(
@@ -86,6 +89,17 @@ class TaskCreateSubtaskTool @Inject constructor(
             message = "Parent task tidak ditemukan",
         )
 
+        // Phase 9: subtask depth limit (anti-loop / runaway recursion).
+        val depth = taskManager.depthOf(parent.id)
+        if (depth >= MAX_SUBTASK_DEPTH) {
+            return ToolResult.Error(
+                callId = call.callId,
+                errorClass = ErrorClass.NOT_AVAILABLE,
+                message = "Subtask depth limit ($MAX_SUBTASK_DEPTH) tercapai — decomposisi sudah cukup dalam",
+                recoveryHint = "Selesaikan subtask existing dulu sebelum buat baru",
+            )
+        }
+
         val subtask = taskManager.enqueue(
             goal = goal,
             channel = parent.channel,
@@ -104,9 +118,11 @@ class TaskCreateSubtaskTool @Inject constructor(
                     createdAt = Clock.System.now(),
                 ),
             )
+            // Phase 9: mark parent BLOCKED supaya AgentRuntime pause iteration.
+            taskDao.updateStatus(parent.id, TaskStatus.BLOCKED, startedAt = parent.startedAt)
         }
 
-        Timber.i("Subtask created: parent=$parentTaskId → child=${subtask.id} blocks=$blocksParent")
+        Timber.i("Subtask created: parent=$parentTaskId → child=${subtask.id} blocks=$blocksParent depth=${depth + 1}")
         return ToolResult.Success(
             callId = call.callId,
             data = JsonObject(mapOf(
@@ -115,7 +131,12 @@ class TaskCreateSubtaskTool @Inject constructor(
                 "blocks_parent" to JsonPrimitive(blocksParent),
                 "channel" to JsonPrimitive(parent.channel.name),
                 "priority" to JsonPrimitive(priority),
+                "depth" to JsonPrimitive(depth + 1),
             )),
         )
+    }
+
+    companion object {
+        private const val MAX_SUBTASK_DEPTH = 3
     }
 }

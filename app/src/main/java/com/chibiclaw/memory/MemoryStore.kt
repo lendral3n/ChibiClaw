@@ -100,6 +100,16 @@ class MemoryStore @Inject constructor(
         }
     }
 
+    /** Phase 9: pin record → immune to confidence decay & auto-forget. */
+    suspend fun setPinned(id: String, pinned: Boolean) {
+        repo.setPinned(id, pinned)
+    }
+
+    /** Phase 9: approve pattern miner candidate → boost confidence ke 0.9. */
+    suspend fun approvePatternCandidate(id: String) {
+        repo.updateConfidence(id, 0.9f)
+    }
+
     suspend fun cleanup(now: Instant = Clock.System.now()) {
         repo.cleanupExpired(now)
         // LRU evict kalau >5000

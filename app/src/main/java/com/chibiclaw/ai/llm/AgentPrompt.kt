@@ -23,6 +23,8 @@ data class AgentPrompt(
     val iteration: Int,
     val maxIteration: Int,
     val responseFormat: ResponseFormat = ResponseFormat.JSON_STRUCTURED,
+    /** Phase 9: optional inline image payload (JPEG bytes) untuk cloud vision fallback. */
+    val imageJpegBytes: ByteArray? = null,
 )
 
 enum class ResponseFormat {

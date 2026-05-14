@@ -50,7 +50,7 @@ class GPTWebAdapter @Inject constructor(
         displayName = "ChatGPT (Web Session)",
         contextWindow = 128_000,
         supportsToolCalling = true,
-        supportsStreaming = true,
+        supportsStreaming = false,  // Phase 9: aggregate SSE; per-token Flow TBD
         supportsVision = true,
         supportsConstrainedDecoding = false,
         isLocal = false,
@@ -69,6 +69,8 @@ class GPTWebAdapter @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    @Volatile private var lastCallMs: Long = 0L
+
     override suspend fun isAvailable(): Boolean {
         val session = loadSession() ?: return false
         if (isSessionExpired(session)) return false
@@ -77,6 +79,13 @@ class GPTWebAdapter @Inject constructor(
     }
 
     override suspend fun complete(prompt: AgentPrompt): InferenceResult = withContext(Dispatchers.IO) {
+        // Phase 9: per-call rate limiter 30s.
+        val gap = System.currentTimeMillis() - lastCallMs
+        if (gap in 1..MIN_CALL_GAP_MS) {
+            kotlinx.coroutines.delay(MIN_CALL_GAP_MS - gap)
+        }
+        lastCallMs = System.currentTimeMillis()
+
         val session = loadSession()
             ?: return@withContext InferenceResult.Error(
                 AdapterErrorClass.AUTH_EXPIRED,
@@ -216,5 +225,6 @@ class GPTWebAdapter @Inject constructor(
     companion object {
         const val KEY_SESSION = "gpt_session_json"
         private val MEDIA_JSON = "application/json; charset=utf-8".toMediaType()
+        private const val MIN_CALL_GAP_MS = 30_000L
     }
 }

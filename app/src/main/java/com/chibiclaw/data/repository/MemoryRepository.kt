@@ -34,6 +34,10 @@ class MemoryRepository @Inject constructor(
         dao.updateConfidence(id, confidence.coerceIn(0f, 1f))
     }
 
+    suspend fun setPinned(id: String, pinned: Boolean) {
+        dao.setPinned(id, pinned)
+    }
+
     suspend fun deleteById(id: String) = dao.deleteById(id)
 
     suspend fun deleteByKey(key: String) = dao.deleteByKey(key)

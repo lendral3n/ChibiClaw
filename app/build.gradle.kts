@@ -6,6 +6,11 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.incremental", "true")
+}
+
 android {
     namespace = "com.chibiclaw"
     compileSdk = 36
@@ -48,6 +53,10 @@ android {
         buildConfig = true
         aidl = true   // Phase 3: Shizuku UserService AIDL
     }
+
+    // Phase 9: Room schema export — schemas/ dir di-commit untuk migration history.
+    // Skip androidTest asset wiring (test framework Phase 9 manual saja);
+    // ksp arg `room.schemaLocation` di atas yang generate file json.
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -143,7 +152,8 @@ dependencies {
     implementation(libs.shizuku.provider)
 
     // Phase 1: LiteRT-LM (Gemma local) + ONNX Runtime (embedding)
-    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    // Pinned 0.11.0 stable (Maven Central latest per 2026-05-04).
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.11.0")
     implementation(libs.onnxruntime.android)
 
     // Phase 5: ML Kit OCR + Play Services Location (vision tools + world_get_location)

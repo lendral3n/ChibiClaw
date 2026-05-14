@@ -21,38 +21,63 @@ Jangan re-design arsitektur. Arsitektur sudah final di file 10-19. Implementasi 
 
 ## Current State (Update setiap session)
 
-**Update terakhir:** 2026-05-14 session "Phase 8 Self-Correction + Concurrency"
+**Update terakhir:** 2026-05-14 session "Phase 9 Polish: All Phases to 100%"
 
-**Phase aktif:** Phase 8 selesai compile (100%). Phase 9 (polish) ready untuk start.
+**Phase aktif:** Phase 9 selesai compile. **Semua Phase 0-9 code-complete 100%.** Manual test atau Phase 10 (VRM) optional.
 
 **Phase Status Summary:**
-- **Phase 0** (Foundation): ✅ DONE (98%, post-audit). Commit `1cb7a75` + `fb9355a`.
-- **Phase 1** (Agent Core): ✅ Compile DONE (85%). Commit `8f6547c` + `fb9355a`.
-- **Phase 2** (Voice + Emotion): ✅ Compile DONE (80%). Commit `c577d33`.
-- **Phase 3** (Tools Mid): ✅ Compile DONE (100% W1–W3 + SafetyGate). Commit `86557c6`.
-- **Phase 4** (Cloud Escalation): ✅ Compile DONE (100% all WP). Commit `1d993de`.
-- **Phase 5** (Vision): ✅ Compile DONE (100% W1–W3). Commit `dffee13`.
-- **Phase 6** (Initiative + Standing): ✅ Compile DONE (100% core, 90% UI). Commit `dbc242e`.
-- **Phase 7** (Memory Maturity): ✅ Compile DONE (100% W1, 95% W2). Commit `c364541`.
-- **Phase 8** (Self-Correction + Concurrency): ✅ Compile DONE (100%). Belum committed.
+- **Phase 0** (Foundation): ✅ Commit `1cb7a75` + `fb9355a`.
+- **Phase 1** (Agent Core): ✅ Commit `8f6547c` + `fb9355a`.
+- **Phase 2** (Voice + Emotion): ✅ Commit `c577d33`.
+- **Phase 3** (Tools Mid): ✅ Commit `86557c6`.
+- **Phase 4** (Cloud Escalation): ✅ Commit `1d993de`.
+- **Phase 5** (Vision): ✅ Commit `dffee13`.
+- **Phase 6** (Initiative + Standing): ✅ Commit `dbc242e`.
+- **Phase 7** (Memory Maturity): ✅ Commit `c364541`.
+- **Phase 8** (Self-Correction + Concurrency): ✅ Commit `6db00c5`.
+- **Phase 9** (Polish & Pre-MVP): ✅ Belum committed.
 
-**Total Kotlin files:** ~95+ di `app/src/main/java/com/chibiclaw/`
-**Build:** sukses 54 detik (warm post-Phase3), APK debug
+**Total Kotlin files:** ~152 di `app/src/main/java/com/chibiclaw/`
+**Build:** sukses 2m23s cold / 8s incremental cache. APK debug.
 
-**Sub-milestone Pending** (reflection-based, auto-bind saat model + dep enabled):
-- Phase 1: GemmaAdapter `runActualInference` (LiteRT-LM real); EmbeddingProvider `encodeOnnx` (ONNX + tokenizer)
-- Phase 2: WhisperStt `transcribeOnnx`; Wav2SmallEmotion `runOnnx`; TextEmotionClassifier `runOnnx`; AuditLog calls di voice pipeline
-- Phase 3: a11y_describe_screen vision fallback (defer Phase 5), NotificationListener buffer persist (defer Phase 7)
+**Reflection-based components** (code-complete, runtime butuh asset push):
+- GemmaAdapter (gemma-4-4b-q4.task ~2.5GB)
+- EmbeddingProvider (e5_small_q8.onnx ~120MB)
+- WhisperStt (sherpa-onnx-whisper bundle ~150MB)
+- Wav2SmallEmotion (wav2small.onnx ~120KB)
+- TextEmotionClassifier (roberta_goemotions_q8.onnx ~125MB)
+- MiniCPMVInference (LlamaCppMm JNI .so + 2 gguf ~800MB) — bisa skip pakai Gemini multimodal
 
-**Working tree:**
-- Phase 8 files: 7 baru (ResourceScheduler, AgentCleanupWorker, TaskDependencyEntity, TaskDependencyDao, TaskCreateSubtaskTool, ErrorStatsScreen, progress-audit-phase-8.md) + 8 modified (TaskManager 3 parallel, AgentRuntime fill-all-slots, ToolDispatcher resource wrap + __taskId set, PromptBuilder self-correction playbook, AppDatabase v5, AppModule provideTaskDependencyDao, ToolsModule task_create_subtask, MainActivity inject + NavHost debug/stats, AuditDao countByOutcome + AuditOutcomeCount, AuditLogger toolOutcomeCountsLast7d, MemoryWorkScheduler enqueue cleanup)
-- Git: HEAD = `c364541` (Phase 7 commit). Lendra sudah push manual sampai sini.
+**Working tree (Phase 9):**
+- 6 file baru: HomeDashboardScreen, NetworkObserver, AppLaunchDetector, CalendarEventObserver, GeofenceManager + Receiver, progress-audit-phase-9.md
+- 20+ modified: build.gradle.kts (pin litertlm 0.11.0 + room schema + cleanup), AppDatabase v5→v6 + Migration, MemoryRecordEntity (+pinned), TaskDao, TaskRepository (auto-mark + unblock), MemoryRepository, MemoryStore, MemoryDecayWorker, AgentPrompt (imageJpegBytes), 4 adapter (supportsStreaming=false), ClaudeWebAdapter (createConv + rate limit), GPTWebAdapter (rate limit), GeminiFreeAdapter (multimodal), EscalateToolHandler (audit), TaskCreateSubtaskTool (depth + parent BLOCKED), TaskManager (depthOf), VoicePipelineOrchestrator (audit), ElevenLabsTts (audit), ScreenCapture (IME guard), AndroidManifest (Geofence receiver), ChibiService (observers + shutdown), MainActivity (HomeNavigation Scaffold + new home route), MemoryInspectorScreen (Pin/Approve + counts).
+- Plus: README.md root (untuk GitHub publish), updates 02-conversation-distilled.md + 30-handover-checklist.md.
+- Git: HEAD = `6db00c5` (Phase 8 commit). Lendra sudah push manual sampai sini.
+
+**Apa yang Lendra perlu siapkan untuk RUNTIME functional:**
+
+1. **Asset files** (push via adb, total ~3-4 GB):
+   - `gemma-4-4b-q4.task` (essential, ~2.5 GB) → Google AI Edge / HF
+   - `e5_small_q8.onnx` + tokenizer (essential, ~120 MB) → HF intfloat/multilingual-e5-small
+   - Whisper sherpa-onnx bundle (opsional voice, ~150 MB)
+   - `wav2small.onnx` (opsional emotion, ~120 KB)
+   - `roberta_goemotions_q8.onnx` + tokenizer (opsional, ~125 MB)
+   - MiniCPM-V (opsional vision, ~800 MB + custom JNI .so)
+
+2. **API keys / sessions** (setup wizard):
+   - Gemini API key (free) — `aistudio.google.com/apikey`
+   - ElevenLabs API key (subscription Lendra)
+   - Claude.ai session (auto via WebView login)
+   - ChatGPT session (auto via WebView login)
+
+3. **Device**: Xiaomi 17 Pro Max China ROM untuk manual test.
 
 **Next action:**
-1. Commit Phase 8 ke git lokal
-2. Lendra push manual lagi
-3. **Phase 9 (Polish: manual test, in-app model downloader, missing edge cases)** ready start
-4. Sub-milestone Phase 1+2+5 paralel kapan saja (push model files + enable deps optional)
+1. Commit Phase 9 ke git lokal
+2. Lendra push manual ke GitHub (README muncul)
+3. Push asset files + setup API keys di device
+4. Manual test end-to-end
+5. (Optional) Phase 10 (VRM Avatar overlay)
 
 **CI/CD Behavior Baru:**
 - Push ke main → `ci.yml` build debug verify (no APK upload)

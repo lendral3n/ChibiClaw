@@ -57,7 +57,7 @@ class ClaudeWebAdapter @Inject constructor(
         displayName = "Claude.ai (Web Session)",
         contextWindow = 200_000,
         supportsToolCalling = true,
-        supportsStreaming = true,
+        supportsStreaming = false,  // Phase 9: aggregate SSE response; per-token Flow TBD
         supportsVision = true,
         supportsConstrainedDecoding = false,
         isLocal = false,
@@ -76,6 +76,9 @@ class ClaudeWebAdapter @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    // Phase 9: per-call rate limiter 30s minimum (anti suspicious-activity Anthropic flag).
+    @Volatile private var lastCallMs: Long = 0L
+
     override suspend fun isAvailable(): Boolean {
         val session = loadSession() ?: return false
         if (isSessionExpired(session)) return false
@@ -84,7 +87,14 @@ class ClaudeWebAdapter @Inject constructor(
     }
 
     override suspend fun complete(prompt: AgentPrompt): InferenceResult = withContext(Dispatchers.IO) {
-        val session = loadSession()
+        // Phase 9: rate-limit per-call 30s (anti-Anthropic suspicious activity flag).
+        val gap = System.currentTimeMillis() - lastCallMs
+        if (gap in 1..MIN_CALL_GAP_MS) {
+            kotlinx.coroutines.delay(MIN_CALL_GAP_MS - gap)
+        }
+        lastCallMs = System.currentTimeMillis()
+
+        var session = loadSession()
             ?: return@withContext InferenceResult.Error(
                 AdapterErrorClass.AUTH_EXPIRED,
                 "Belum login Claude.ai. Setup wizard → Cloud → Claude login.",
@@ -95,10 +105,21 @@ class ClaudeWebAdapter @Inject constructor(
                 "Session Claude.ai expired (lebih dari ${session.maxAgeDays} hari). Re-login.",
             )
         }
-        val convId = session.activeConvId ?: return@withContext InferenceResult.Error(
-            AdapterErrorClass.AUTH_EXPIRED,
-            "Conversation ID claude.ai belum di-prebuild. Re-login flow akan create.",
-        )
+        // Phase 9: auto-create conversation kalau session belum punya activeConvId.
+        var convId = session.activeConvId
+        if (convId.isNullOrBlank()) {
+            convId = createConversation(session)
+            if (convId != null) {
+                session = session.copy(activeConvId = convId)
+                securePreferences.putString(KEY_SESSION, json.encodeToString(ClaudeWebSession.serializer(), session))
+                Timber.i("Auto-created Claude conversation: $convId")
+            } else {
+                return@withContext InferenceResult.Error(
+                    AdapterErrorClass.AUTH_EXPIRED,
+                    "Gagal create conversation baru di claude.ai (session mungkin invalid)",
+                )
+            }
+        }
 
         val url = "https://claude.ai/api/organizations/${session.orgId}/chat_conversations/$convId/completion"
         val body = buildJsonObject {
@@ -175,6 +196,32 @@ class ClaudeWebAdapter @Inject constructor(
         return ageDays >= session.maxAgeDays
     }
 
+    /** Phase 9: auto-create conversation kalau session.activeConvId null. */
+    private fun createConversation(session: ClaudeWebSession): String? {
+        val url = "https://claude.ai/api/organizations/${session.orgId}/chat_conversations"
+        val uuid = java.util.UUID.randomUUID().toString()
+        val body = buildJsonObject {
+            put("uuid", uuid)
+            put("name", "")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .post(body.toString().toRequestBody(MEDIA_JSON))
+            .header("Cookie", session.cookies.joinToString("; "))
+            .header("User-Agent", session.userAgent)
+            .header("anthropic-client-sha", session.clientSha)
+            .header("anthropic-client-version", session.clientVersion)
+            .header("anthropic-device-id", session.deviceId)
+            .header("Origin", "https://claude.ai")
+            .header("Referer", "https://claude.ai/new")
+            .build()
+        return runCatching {
+            http.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) uuid else null
+            }
+        }.onFailure { Timber.w(it, "Claude createConversation gagal") }.getOrNull()
+    }
+
     /**
      * Parse SSE stream — Claude emit "event: completion\ndata: {...}\n\n" frames.
      * Aggregate semua delta `completion` ke single string.
@@ -212,5 +259,6 @@ class ClaudeWebAdapter @Inject constructor(
     companion object {
         const val KEY_SESSION = "claude_session_json"
         private val MEDIA_JSON = "application/json; charset=utf-8".toMediaType()
+        private const val MIN_CALL_GAP_MS = 30_000L
     }
 }

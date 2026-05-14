@@ -32,6 +32,7 @@ import javax.inject.Singleton
 class ElevenLabsTts @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val audioTrackManager: AudioTrackManager,
+    private val auditLogger: com.chibiclaw.compliance.AuditLogger,
 ) {
 
     private val httpClient = OkHttpClient.Builder()
@@ -49,6 +50,10 @@ class ElevenLabsTts @Inject constructor(
     suspend fun speak(text: String, emotion: String? = null): TtsResult = withContext(Dispatchers.IO) {
         val apiKey = securePreferences.getString(KEY_ELEVENLABS_API_KEY)
             ?: return@withContext TtsResult.Error("ElevenLabs API key belum di-set di Settings")
+        auditLogger.log(
+            actionType = com.chibiclaw.data.database.AuditActionType.TTS_PLAYBACK,
+            dataSummary = "TTS speak ${text.length} chars emotion=$emotion",
+        )
 
         val processedText = applyEmotionTag(text, emotion)
         val settings = computeVoiceSettings(emotion)

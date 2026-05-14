@@ -116,6 +116,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Phase 6: Geofence broadcast receiver -->
+        <receiver
+            android:name=".world.geofence.GeofenceBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.chibiclaw.GEOFENCE_EVENT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

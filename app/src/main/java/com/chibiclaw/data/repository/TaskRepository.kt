@@ -2,9 +2,11 @@ package com.chibiclaw.data.repository
 
 import com.chibiclaw.data.database.AgentStepDao
 import com.chibiclaw.data.database.AgentStepEntity
+import com.chibiclaw.data.database.DependencyStatus
 import com.chibiclaw.data.database.NextIntent
 import com.chibiclaw.data.database.TaskChannel
 import com.chibiclaw.data.database.TaskDao
+import com.chibiclaw.data.database.TaskDependencyDao
 import com.chibiclaw.data.database.TaskEntity
 import com.chibiclaw.data.database.TaskStatus
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +20,7 @@ import javax.inject.Singleton
 class TaskRepository @Inject constructor(
     private val taskDao: TaskDao,
     private val agentStepDao: AgentStepDao,
+    private val dependencyDao: TaskDependencyDao,
 ) {
 
     suspend fun create(
@@ -64,11 +67,35 @@ class TaskRepository @Inject constructor(
     }
 
     suspend fun markCompleted(id: String, summary: String, emotion: String?) {
-        taskDao.markCompleted(id, TaskStatus.COMPLETED, Clock.System.now(), summary, emotion)
+        val now = Clock.System.now()
+        taskDao.markCompleted(id, TaskStatus.COMPLETED, now, summary, emotion)
+        // Phase 9: auto-mark dependencies RESOLVED + unblock parent kalau no pending deps.
+        dependencyDao.resolveDependentsOf(id, DependencyStatus.RESOLVED, now)
+        unblockParentsIfClear(id)
     }
 
     suspend fun markFailed(id: String, error: String) {
-        taskDao.markFailed(id, TaskStatus.FAILED, Clock.System.now(), error)
+        val now = Clock.System.now()
+        taskDao.markFailed(id, TaskStatus.FAILED, now, error)
+        // Phase 9: subtask fail → propagate FAILED ke deps; parent biarkan
+        // putuskan sendiri lewat agent loop iteration berikutnya.
+        dependencyDao.resolveDependentsOf(id, DependencyStatus.FAILED, now)
+        unblockParentsIfClear(id)
+    }
+
+    /** Phase 9: walk dependents — kalau sudah tidak ada PENDING dep, parent kembali PENDING. */
+    private suspend fun unblockParentsIfClear(resolvedTaskId: String) {
+        val edges = dependencyDao.listDependents(resolvedTaskId)
+        edges.forEach { edge ->
+            val parentTaskId = edge.taskId
+            val pending = dependencyDao.countPending(parentTaskId)
+            if (pending == 0) {
+                val parent = taskDao.get(parentTaskId) ?: return@forEach
+                if (parent.status == TaskStatus.BLOCKED) {
+                    taskDao.updateStatus(parentTaskId, TaskStatus.PENDING, startedAt = null)
+                }
+            }
+        }
     }
 
     suspend fun markAwaitingUser(id: String, question: String) {

@@ -36,6 +36,7 @@ class MemoryDecayWorker @AssistedInject constructor(
         val stale = repo.listStaleSince(staleThreshold)
         var decayed = 0
         stale.forEach { record ->
+            if (record.pinned) return@forEach   // Phase 9: skip pinned
             val newConfidence = (record.confidence - DECAY_STEP).coerceAtLeast(0f)
             if (newConfidence < record.confidence) {
                 repo.updateConfidence(record.id, newConfidence)

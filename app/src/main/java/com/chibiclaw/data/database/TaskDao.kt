@@ -100,6 +100,9 @@ interface MemoryDao {
     @Query("UPDATE memory_record SET confidence = :confidence WHERE id = :id")
     suspend fun updateConfidence(id: String, confidence: Float)
 
+    @Query("UPDATE memory_record SET pinned = :pinned WHERE id = :id")
+    suspend fun setPinned(id: String, pinned: Boolean)
+
     @Query("DELETE FROM memory_record WHERE id = :id")
     suspend fun deleteById(id: String)
 
@@ -115,7 +118,12 @@ interface MemoryDao {
     @Query("SELECT * FROM memory_record WHERE last_accessed_at < :threshold")
     suspend fun listStaleSince(threshold: Instant): List<MemoryRecordEntity>
 
-    @Query("DELETE FROM memory_record WHERE confidence < :minConfidence AND last_accessed_at < :threshold")
+    @Query("""
+        DELETE FROM memory_record
+        WHERE confidence < :minConfidence
+          AND last_accessed_at < :threshold
+          AND pinned = 0
+    """)
     suspend fun deleteLowConfidenceStale(minConfidence: Float, threshold: Instant): Int
 
     @Query("SELECT category, COUNT(*) as cnt FROM memory_record GROUP BY category")

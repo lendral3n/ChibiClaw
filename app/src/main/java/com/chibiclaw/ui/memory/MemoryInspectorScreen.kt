@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chibiclaw.data.database.MemoryCategory
 import com.chibiclaw.data.database.MemoryRecordEntity
+import com.chibiclaw.data.repository.MemoryRepository
 import com.chibiclaw.memory.MemoryStore
 import com.chibiclaw.memory.categories.CategoryTemplates
 import kotlinx.coroutines.launch
@@ -46,15 +47,20 @@ import kotlinx.coroutines.launch
 @Composable
 fun MemoryInspectorScreen(
     memoryStore: MemoryStore,
+    memoryRepository: MemoryRepository? = null,
 ) {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableIntStateOf(0) }
     var records by remember { mutableStateOf(emptyList<MemoryRecordEntity>()) }
+    var counts by remember { mutableStateOf(emptyMap<MemoryCategory, Int>()) }
     var query by remember { mutableStateOf("") }
     val categories = MemoryCategory.values()
 
     suspend fun refresh() {
         records = memoryStore.listByCategory(categories[selectedTab])
+        if (memoryRepository != null) {
+            counts = memoryRepository.countByCategory().associate { it.category to it.cnt }
+        }
     }
 
     LaunchedEffect(selectedTab) { refresh() }
@@ -70,6 +76,15 @@ fun MemoryInspectorScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        if (counts.isNotEmpty()) {
+            Text(
+                text = "Total per kategori: " +
+                    categories.joinToString(" · ") { "${it.name.first()}=${counts[it] ?: 0}" },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -119,6 +134,18 @@ fun MemoryInspectorScreen(
                                 refresh()
                             }
                         },
+                        onTogglePin = { pinned ->
+                            scope.launch {
+                                memoryStore.setPinned(record.id, pinned)
+                                refresh()
+                            }
+                        },
+                        onApprove = {
+                            scope.launch {
+                                memoryStore.approvePatternCandidate(record.id)
+                                refresh()
+                            }
+                        },
                     )
                 }
             }
@@ -130,8 +157,11 @@ fun MemoryInspectorScreen(
 private fun MemoryRow(
     record: MemoryRecordEntity,
     onDelete: () -> Unit,
+    onTogglePin: (Boolean) -> Unit,
+    onApprove: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isCandidate = record.key.startsWith("auto:") && record.confidence < 0.85f
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -145,7 +175,7 @@ private fun MemoryRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = record.key,
+                    text = (if (record.pinned) "📌 " else "") + record.key,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
@@ -169,6 +199,18 @@ private fun MemoryRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
+                if (isCandidate) {
+                    TextButton(
+                        onClick = onApprove,
+                        modifier = Modifier.height(36.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                    ) { Text("✅ Approve") }
+                }
+                TextButton(
+                    onClick = { onTogglePin(!record.pinned) },
+                    modifier = Modifier.height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) { Text(if (record.pinned) "Unpin" else "📌 Pin") }
                 TextButton(
                     onClick = { expanded = !expanded },
                     modifier = Modifier.height(36.dp),

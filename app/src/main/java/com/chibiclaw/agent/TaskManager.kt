@@ -73,6 +73,21 @@ class TaskManager @Inject constructor(
 
     fun maxParallel(): Int = maxParallel
 
+    /**
+     * Phase 9: hitung depth task tree (anti-loop subtask).
+     * Walk parent_id chain, max 16 hop safeguard.
+     */
+    suspend fun depthOf(taskId: String): Int {
+        var depth = 0
+        var current = repo.get(taskId)
+        repeat(16) {
+            val parentId = current?.parentId ?: return depth
+            depth++
+            current = repo.get(parentId)
+        }
+        return depth
+    }
+
     suspend fun resumeIncomplete(): List<TaskEntity> {
         // Phase 8: kalau ada incomplete task post-crash, mark failed (recovery
         // sederhana). Polish berikutnya: resume tergantung umur + last step

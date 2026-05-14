@@ -34,6 +34,8 @@ data class MemoryRecordEntity(
     val confidence: Float = 1.0f,
     @ColumnInfo(name = "ttl_until") val ttlUntil: Instant? = null,
     @ColumnInfo(name = "source_task_id") val sourceTaskId: String? = null,
+    /** Phase 7 polish: pinned record immune to confidence decay & auto-forget. */
+    @ColumnInfo(name = "pinned", defaultValue = "0") val pinned: Boolean = false,
 ) {
     // Custom equals/hashCode untuk ByteArray comparison
     override fun equals(other: Any?): Boolean {

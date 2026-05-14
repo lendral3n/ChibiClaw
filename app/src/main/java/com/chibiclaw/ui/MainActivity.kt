@@ -12,17 +12,25 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.chibiclaw.compliance.AuditLogger
 import com.chibiclaw.data.database.AuditActionType
@@ -33,6 +41,7 @@ import com.chibiclaw.service.ChibiService
 import com.chibiclaw.agent.TaskManager
 import com.chibiclaw.agent.initiative.trigger.CronParser
 import com.chibiclaw.agent.scheduler.ResourceScheduler
+import com.chibiclaw.data.repository.MemoryRepository
 import com.chibiclaw.memory.MemoryStore
 import com.chibiclaw.ai.llm.AdapterQuotaTracker
 import com.chibiclaw.ai.llm.InferenceRouter
@@ -42,6 +51,7 @@ import com.chibiclaw.ui.chat.ChatScreen
 import com.chibiclaw.ui.debug.ErrorStatsScreen
 import com.chibiclaw.ui.debug.TaskDetailScreen
 import com.chibiclaw.ui.debug.TaskListScreen
+import com.chibiclaw.ui.home.HomeDashboardScreen
 import com.chibiclaw.ui.initiative.StandingInstructionEditorScreen
 import com.chibiclaw.ui.initiative.StandingInstructionListScreen
 import com.chibiclaw.ui.memory.MemoryInspectorScreen
@@ -75,6 +85,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var standingInstructionRepo: StandingInstructionRepository
     @Inject lateinit var cronParser: CronParser
     @Inject lateinit var memoryStore: MemoryStore
+    @Inject lateinit var memoryRepository: MemoryRepository
     @Inject lateinit var taskManager: TaskManager
     @Inject lateinit var resourceScheduler: ResourceScheduler
 
@@ -105,6 +116,7 @@ class MainActivity : ComponentActivity() {
                                 standingInstructionRepo = standingInstructionRepo,
                                 cronParser = cronParser,
                                 memoryStore = memoryStore,
+                                memoryRepository = memoryRepository,
                                 taskManager = taskManager,
                                 resourceScheduler = resourceScheduler,
                                 auditLogger = auditLogger,
@@ -143,6 +155,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeNavigation(
     router: InferenceRouter,
@@ -152,57 +165,103 @@ private fun HomeNavigation(
     standingInstructionRepo: StandingInstructionRepository,
     cronParser: CronParser,
     memoryStore: MemoryStore,
+    memoryRepository: MemoryRepository,
     taskManager: TaskManager,
     resourceScheduler: ResourceScheduler,
     auditLogger: com.chibiclaw.compliance.AuditLogger,
 ) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "chat") {
-        composable("chat") {
-            ChatScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
-        }
-        composable("tasks") {
-            TaskListScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
-        }
-        composable("task/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id") ?: return@composable
-            TaskDetailScreen(taskId = id)
-        }
-        composable("settings/ai_engine") {
-            AiEngineSettingsScreen(
-                router = router,
-                quotaTracker = quotaTracker,
-                rotator = sessionRotator,
-                sessionExtractor = sessionExtractor,
-            )
-        }
-        composable("initiative/list") {
-            StandingInstructionListScreen(
-                repository = standingInstructionRepo,
-                onCreateNew = { navController.navigate("initiative/edit/new") },
-                onEdit = { id -> navController.navigate("initiative/edit/$id") },
-            )
-        }
-        composable("initiative/edit/{id}") { backStackEntry ->
-            val raw = backStackEntry.arguments?.getString("id") ?: "new"
-            val editingId = if (raw == "new") null else raw
-            StandingInstructionEditorScreen(
-                repository = standingInstructionRepo,
-                cronParser = cronParser,
-                editingId = editingId,
-                onDone = { navController.popBackStack("initiative/list", inclusive = false) },
-                onCancel = { navController.popBackStack() },
-            )
-        }
-        composable("memory/inspector") {
-            MemoryInspectorScreen(memoryStore = memoryStore)
-        }
-        composable("debug/stats") {
-            ErrorStatsScreen(
-                taskManager = taskManager,
-                resourceScheduler = resourceScheduler,
-                auditLogger = auditLogger,
-            )
+    val backStack by navController.currentBackStackEntryAsState()
+    val currentRoute = backStack?.destination?.route
+
+    Scaffold(
+        topBar = {
+            if (currentRoute != null && currentRoute != "home") {
+                TopAppBar(
+                    title = { Text(routeTitle(currentRoute)) },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                )
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            NavHost(navController = navController, startDestination = "home") {
+                composable("home") {
+                    HomeDashboardScreen(
+                        onOpenChat = { navController.navigate("chat") },
+                        onOpenTasks = { navController.navigate("tasks") },
+                        onOpenAiEngine = { navController.navigate("settings/ai_engine") },
+                        onOpenInitiative = { navController.navigate("initiative/list") },
+                        onOpenMemory = { navController.navigate("memory/inspector") },
+                        onOpenStats = { navController.navigate("debug/stats") },
+                    )
+                }
+                composable("chat") {
+                    ChatScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
+                }
+                composable("tasks") {
+                    TaskListScreen(onOpenTask = { taskId -> navController.navigate("task/$taskId") })
+                }
+                composable("task/{id}") { backStackEntry ->
+                    val id = backStackEntry.arguments?.getString("id") ?: return@composable
+                    TaskDetailScreen(taskId = id)
+                }
+                composable("settings/ai_engine") {
+                    AiEngineSettingsScreen(
+                        router = router,
+                        quotaTracker = quotaTracker,
+                        rotator = sessionRotator,
+                        sessionExtractor = sessionExtractor,
+                    )
+                }
+                composable("initiative/list") {
+                    StandingInstructionListScreen(
+                        repository = standingInstructionRepo,
+                        onCreateNew = { navController.navigate("initiative/edit/new") },
+                        onEdit = { id -> navController.navigate("initiative/edit/$id") },
+                    )
+                }
+                composable("initiative/edit/{id}") { backStackEntry ->
+                    val raw = backStackEntry.arguments?.getString("id") ?: "new"
+                    val editingId = if (raw == "new") null else raw
+                    StandingInstructionEditorScreen(
+                        repository = standingInstructionRepo,
+                        cronParser = cronParser,
+                        editingId = editingId,
+                        onDone = { navController.popBackStack("initiative/list", inclusive = false) },
+                        onCancel = { navController.popBackStack() },
+                    )
+                }
+                composable("memory/inspector") {
+                    MemoryInspectorScreen(
+                        memoryStore = memoryStore,
+                        memoryRepository = memoryRepository,
+                    )
+                }
+                composable("debug/stats") {
+                    ErrorStatsScreen(
+                        taskManager = taskManager,
+                        resourceScheduler = resourceScheduler,
+                        auditLogger = auditLogger,
+                    )
+                }
+            }
         }
     }
+}
+
+private fun routeTitle(route: String): String = when {
+    route == "chat" -> "Chat"
+    route == "tasks" -> "Tasks"
+    route.startsWith("task/") -> "Task Detail"
+    route == "settings/ai_engine" -> "AI Engine"
+    route == "initiative/list" -> "Standing Instructions"
+    route.startsWith("initiative/edit") -> "Edit Instruction"
+    route == "memory/inspector" -> "Memory"
+    route == "debug/stats" -> "Debug Stats"
+    else -> "ChibiClaw"
 }

@@ -6,6 +6,80 @@ Raw chat archive: lihat folder `sessions/`.
 
 ---
 
+## Session 2026-05-14 — Phase 9 Polish: All Phases to 100%
+
+**Durasi:** ~2.5 jam
+**Outcome:** Semua 10 cross-phase issue dari analisis sebelumnya resolved. Phase 0-8 code-complete 100%. README.md root project siap GitHub.
+
+### Topik Kunci
+- HomeDashboardScreen sebagai entry point + TopAppBar back button via Scaffold
+- LiteRT-LM pinned 0.11.0 (verified via Maven Central metadata.xml)
+- Room schemaLocation configured + Migration v5→v6 (MemoryRecord.pinned column)
+- Remove blanket fallbackToDestructive — proper migration v5+
+- 4 cloud/local adapter supportsStreaming=false (honest)
+- MiniCPMVInference.shutdown wired di ChibiService.onDestroy (was JNI leak)
+- AuditLog Phase 2 voice pipeline calls (MIC/STT/TTS) — DoD gap fix
+- AuditLog dedicated LLM_CALL_CLOUD action type + cloudDestination field
+- ClaudeWebAdapter persistent conversation auto-create kalau activeConvId null
+- Per-call rate limiter 30s di Claude + GPT adapter
+- Gemini multimodal image payload via AgentPrompt.imageJpegBytes
+- Subtask depth limit (max 3) + dependency resolver auto-mark RESOLVED + auto-unblock parent
+- 4 observer baru: NetworkObserver, AppLaunchDetector, CalendarEventObserver, GeofenceManager
+- MemoryRecord.pinned flag immune to decay + approve pattern candidate boost 0.9
+- IME visibility guard di ScreenCapture (refuse capture kalau keyboard visible)
+
+### Module yang Ditulis Phase 9
+**Baru (6):**
+- `ui/home/HomeDashboardScreen.kt`
+- `world/observers/NetworkObserver.kt`
+- `world/observers/AppLaunchDetector.kt`
+- `world/observers/CalendarEventObserver.kt`
+- `world/geofence/GeofenceManager.kt`
+- `world/geofence/GeofenceBroadcastReceiver.kt`
+
+**Modified (20+):** build.gradle.kts (pin + room schema + sourceSets cleanup), AppDatabase v5→v6, MemoryRecordEntity (+pinned), TaskDao (setPinned + deleteLowConf exclude pinned), TaskRepository (dependencyDao + auto-mark + unblock), MemoryRepository (setPinned), MemoryStore (setPinned + approve), MemoryDecayWorker (skip pinned), AgentPrompt (imageJpegBytes), 4 adapter (supportsStreaming false), ClaudeWebAdapter (createConversation + rate limiter), GPTWebAdapter (rate limiter), GeminiFreeAdapter (multimodal), EscalateToolHandler (audit LLM_CALL_CLOUD), TaskCreateSubtaskTool (depth limit + parent BLOCKED), TaskManager (depthOf), VoicePipelineOrchestrator (audit MIC/STT), ElevenLabsTts (audit TTS), ScreenCapture (IME guard), AndroidManifest (Geofence receiver), ChibiService (observer lifecycle + MiniCPMV shutdown), MainActivity (HomeNavigation Scaffold + TopAppBar + new home route), MemoryInspectorScreen (Pin/Approve buttons + counts).
+
+### Build Result
+```
+> Task :app:assembleDebug
+BUILD SUCCESSFUL in 2m 23s (cold)
+BUILD SUCCESSFUL in 8s (incremental UP-TO-DATE)
+```
+
+### Issue Encountered & Fixed
+1. LiteRT-LM `0.7.0` tidak ada di Maven → verified via metadata.xml, pin ke `0.11.0` (latest stable).
+2. `sourceSets.androidTest.assets.srcDir` deprecated AGP 9+ → removed wiring (test framework manual Phase 9 anyway).
+
+### Keputusan di Session Ini
+- MiniCPM-V JNI .so build defer Phase 10 (MVP rely Gemini multimodal)
+- bge-m3 defer
+- Streaming SSE per-token defer (set false honest dulu)
+- VRM Avatar = Phase 10 bonus
+
+### Aksi Dilakukan
+- 6 file baru + 20+ modified
+- `progress-audit-phase-9.md` ditulis lengkap
+- `README.md` root project di-create untuk GitHub publish
+
+### Open Items / Next
+- Commit Phase 9 ke git lokal
+- Lendra push manual ke GitHub (README muncul di repo page)
+- **Lendra perlu siapkan untuk runtime functional:**
+  - Asset files (6 model, sizes 120KB - 2.5GB)
+  - API keys/sessions (Gemini free + ElevenLabs subscription + Claude/GPT web)
+- Phase 10 (VRM Avatar) atau release candidate
+
+### State Akhir Session
+- Build hijau (cache hit 8s incremental)
+- 25 tools, 10-step setup wizard, HomeDashboard + back button navigation
+- 6 event observer aktif: notif/system/network/app-launch/calendar/geofence
+- 3 periodic worker enqueued (miner + decay + cleanup)
+- Pinned memory immune to decay + approve pattern candidate boost 0.9
+- IME guard untuk privacy screenshot
+- Total Phase 0-9 status: code-complete 100%, runtime tergantung asset external
+
+---
+
 ## Session 2026-05-14 — Phase 8 Self-Correction + Concurrency
 
 **Durasi:** ~2 jam

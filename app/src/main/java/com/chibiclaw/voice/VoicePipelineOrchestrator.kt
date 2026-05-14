@@ -1,6 +1,9 @@
 package com.chibiclaw.voice
 
 import com.chibiclaw.agent.ConversationManager
+import com.chibiclaw.compliance.AuditLogger
+import com.chibiclaw.data.database.AuditActionType
+import com.chibiclaw.data.database.AuditResultStatus
 import com.chibiclaw.voice.audio.MicCapture
 import com.chibiclaw.voice.audio.MicLock
 import com.chibiclaw.voice.emotion.EmotionDetector
@@ -8,9 +11,6 @@ import com.chibiclaw.voice.stt.SttResult
 import com.chibiclaw.voice.stt.WhisperStt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
@@ -31,6 +31,7 @@ class VoicePipelineOrchestrator @Inject constructor(
     private val whisperStt: WhisperStt,
     private val emotionDetector: EmotionDetector,
     private val conversationManager: ConversationManager,
+    private val auditLogger: AuditLogger,
 ) {
 
     @Volatile private var activeJob: Job? = null
@@ -44,19 +45,28 @@ class VoicePipelineOrchestrator @Inject constructor(
     fun start(scope: CoroutineScope, onTranscribed: suspend (String) -> Unit) {
         if (isRecording()) return
 
+        // Phase 9: audit log MIC_ACTIVATED (Phase 2 had infrastructure tapi tidak di-call).
+        auditLogger.log(
+            actionType = AuditActionType.MIC_ACTIVATED,
+            dataSummary = "Mic capture started by user tap",
+        )
+
         activeJob = scope.launch {
             try {
                 micLock.withMic {
                     val audioFlow = micCapture.stream()
                         .takeWhile { activeJob?.isActive == true }
-                        .onEach { chunk ->
-                            // Observe untuk emotion detect di akhir
-                            // (Phase 2 simple: full buffer; Phase 6 polish: chunked emotion)
+                        .onEach { _ ->
+                            // Phase 6 polish: chunked emotion detect per audio chunk.
                         }
                     whisperStt.streamingTranscribe(audioFlow).collect { result ->
                         when (result) {
                             is SttResult.Final -> {
                                 Timber.i("STT final: ${result.text.take(80)}")
+                                auditLogger.log(
+                                    actionType = AuditActionType.STT_RESULT,
+                                    dataSummary = "STT final ${result.text.length} chars",
+                                )
                                 emotionDetector.observeText(result.text)
                                 onTranscribed(result.text)
                                 if (result.text.isNotBlank() && !result.text.startsWith("[STT belum aktif")) {
@@ -64,13 +74,18 @@ class VoicePipelineOrchestrator @Inject constructor(
                                 }
                             }
                             is SttResult.Partial -> {
-                                // Phase 2 polish: stream partial ke UI buat live caption
+                                // Phase 2 polish: stream partial ke UI buat live caption.
                             }
                         }
                     }
                 }
             } catch (t: Throwable) {
                 Timber.e(t, "VoicePipeline error")
+                auditLogger.log(
+                    actionType = AuditActionType.STT_RESULT,
+                    dataSummary = "Voice pipeline exception: ${t.message?.take(80)}",
+                    resultStatus = AuditResultStatus.FAILED,
+                )
             }
         }
     }
@@ -78,5 +93,9 @@ class VoicePipelineOrchestrator @Inject constructor(
     fun stop() {
         activeJob?.cancel()
         activeJob = null
+        auditLogger.log(
+            actionType = AuditActionType.MIC_DEACTIVATED,
+            dataSummary = "Mic capture stopped",
+        )
     }
 }

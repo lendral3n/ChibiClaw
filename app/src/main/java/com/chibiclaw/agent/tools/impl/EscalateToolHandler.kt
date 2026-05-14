@@ -11,6 +11,8 @@ import com.chibiclaw.agent.tools.ToolSeverity
 import com.chibiclaw.agent.tools.ToolSpec
 import com.chibiclaw.ai.llm.AdapterTarget
 import com.chibiclaw.ai.llm.InferenceRouter
+import com.chibiclaw.compliance.AuditLogger
+import com.chibiclaw.data.database.AuditActionType
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
@@ -31,6 +33,7 @@ import javax.inject.Inject
  */
 class EscalateToolHandler @Inject constructor(
     private val router: InferenceRouter,
+    private val auditLogger: AuditLogger,
 ) : Tool {
 
     override val spec = ToolSpec(
@@ -91,6 +94,14 @@ class EscalateToolHandler @Inject constructor(
             )
 
         Timber.i("Escalate granted: target=$target reason='$reason' → ${adapter.id}")
+        // Phase 9: audit log dedicated LLM_CALL_CLOUD (sebelumnya generik TOOL_EXECUTED).
+        auditLogger.log(
+            actionType = AuditActionType.LLM_CALL_CLOUD,
+            dataSummary = "Escalate to ${adapter.id} (reason: ${reason.take(80)})",
+            taskId = pinTaskId,
+            toolName = "escalate_to_cloud",
+            cloudDestination = adapter.id,
+        )
         return ToolResult.Success(
             callId = call.callId,
             data = JsonObject(mapOf(

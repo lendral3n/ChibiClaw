@@ -19,7 +19,11 @@ import com.chibiclaw.memory.miner.MemoryWorkScheduler
 import com.chibiclaw.data.database.AuditActionType
 import com.chibiclaw.service.overlay.OverlayWindowManager
 import com.chibiclaw.ui.MainActivity
+import com.chibiclaw.vision.llm.MiniCPMVInference
 import com.chibiclaw.vision.projection.ChibiProjectionManager
+import com.chibiclaw.world.observers.AppLaunchDetector
+import com.chibiclaw.world.observers.CalendarEventObserver
+import com.chibiclaw.world.observers.NetworkObserver
 import com.chibiclaw.world.observers.NotificationEventBridge
 import com.chibiclaw.world.observers.SystemEventReceiver
 import dagger.hilt.android.AndroidEntryPoint
@@ -57,6 +61,10 @@ class ChibiService : Service() {
     @Inject lateinit var notificationEventBridge: NotificationEventBridge
     @Inject lateinit var initiativeEngine: InitiativeEngine
     @Inject lateinit var memoryWorkScheduler: MemoryWorkScheduler
+    @Inject lateinit var miniCpmvInference: MiniCPMVInference
+    @Inject lateinit var networkObserver: NetworkObserver
+    @Inject lateinit var appLaunchDetector: AppLaunchDetector
+    @Inject lateinit var calendarEventObserver: CalendarEventObserver
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val binder = LocalBinder()
@@ -84,12 +92,15 @@ class ChibiService : Service() {
             Timber.i("MediaProjection recreate on service start: $ok")
         }
 
-        // Phase 6: event sources + InitiativeEngine.
+        // Phase 6 + 9: event sources + observers + InitiativeEngine.
         systemEventReceiver.register()
         notificationEventBridge.start()
+        networkObserver.start()
+        appLaunchDetector.start()
+        calendarEventObserver.start()
         initiativeEngine.start()
 
-        // Phase 7: schedule periodic memory workers (pattern miner + decay).
+        // Phase 7: schedule periodic memory workers (pattern miner + decay + cleanup).
         memoryWorkScheduler.schedule()
 
         auditLogger.log(
@@ -105,11 +116,16 @@ class ChibiService : Service() {
     override fun onDestroy() {
         Timber.i("ChibiService.onDestroy()")
         initiativeEngine.stop()
+        calendarEventObserver.stop()
+        appLaunchDetector.stop()
+        networkObserver.stop()
         notificationEventBridge.stop()
         systemEventReceiver.unregister()
         agentRuntime.stop()
         overlayWindowManager.hideBubble()
         projectionManager.teardown()
+        // Phase 9: shutdown JNI handle MiniCPM-V (was leaking pre-Phase 9).
+        miniCpmvInference.shutdown()
         scope.cancel()
         auditLogger.log(
             actionType = AuditActionType.SERVICE_STOPPED,

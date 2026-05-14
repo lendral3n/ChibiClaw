@@ -52,7 +52,7 @@ class GemmaAdapter @Inject constructor(
         displayName = "Gemma 4 4B (Local, LiteRT-LM)",
         contextWindow = 128_000,
         supportsToolCalling = true,
-        supportsStreaming = true,
+        supportsStreaming = false,  // Phase 9: aggregate-only; per-token stream defer
         supportsVision = false,
         supportsConstrainedDecoding = true,
         isLocal = true,
